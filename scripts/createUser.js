@@ -19,7 +19,7 @@ db.connect(async (err) => {
   console.log("Connected to database");
 
   const username = "admin"; // Change if needed
-  const plainPassword = "grass25"; // Choose a secure password
+  const plainPassword = process.env.DFF_DB_UI_PASSWORD; 
   const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
   db.query(
