@@ -3,20 +3,21 @@ const express = require("express");
 const mysql = require("mysql2");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const cors = require("cors");
 
 const app = express();
 app.use(express.json());
 
+const cors = require("cors");
+
 app.use(cors({
-  origin: function (origin, callback) {
-    callback(null, true); // ✅ Allows all origins dynamically (but still supports credentials)
-  },
-  credentials: true, // ✅ Needed if using authentication (cookies or Authorization headers)
+  origin: "https://jdeck88.github.io", // ✅ Allow requests from GitHub Pages
+  credentials: true,  // ✅ Allow cookies and Authorization headers
   methods: "GET,POST,PUT,DELETE,OPTIONS",
   allowedHeaders: "Content-Type,Authorization"
 }));
 
+// ✅ Automatically handle OPTIONS requests
+app.options("*", cors()); 
 
 // ✅ Database Connection
 const db = mysql.createConnection({
