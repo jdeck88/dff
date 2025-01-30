@@ -17,13 +17,6 @@ th, td {
     text-align: left;
 }
 
-th {
-    background-color: #f4f4f4;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
 /* ✅ Login Form (Float Right) */
 form {
     float: right;
@@ -74,4 +67,28 @@ form {
     background: white;
     border: 1px solid #ddd;
     pointer-events: auto;
+}
+
+/* ✅ Table Header Sort Styling */
+th {
+    background-color: #f4f4f4;
+    cursor: pointer; /* ✅ Clickable headers for sorting */
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+th:hover {
+    background-color: #ddd;
+}
+
+/* ✅ Search Bar Styling */
+.search-container {
+    margin-bottom: 10px;
+}
+
+.search-container input {
+    width: 200px;
+    padding: 5px;
+    margin-right: 5px;
 }

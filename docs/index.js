@@ -1,4 +1,6 @@
 let editingRow = null;
+let currentSortColumn = -1;
+let currentSortDirection = "asc";
 
 async function login() {
     const username = document.getElementById("username").value;
@@ -38,95 +40,75 @@ async function loadData() {
         });
 
         const data = await response.json();
-        let tableBody = document.getElementById("tableBody");
-        tableBody.innerHTML = "";
-
-        data.forEach(row => {
-            tableBody.innerHTML += `
-                <tr data-id="${row.id}">
-                    <td>${row.category}</td>
-                    <td>${row.productName}</td>
-                    <td>${row.packageName}</td>
-                    <td>${row.available_on_ll ? 'True' : 'False'}</td>
-                    <td><div class="toggle-switch ${row.visible ? 'active' : ''}" onclick="toggleEdit(this)"></div></td>
-                    <td><div class="toggle-switch ${row.track_inventory ? 'active' : ''}" onclick="toggleEdit(this)"></div></td>
-                    <td><input type="number" class="stock-input" value="${row.stock_inventory}" disabled></td>
-                    <td>
-                        <button onclick="editRow(this)">Edit</button>
-                        <button onclick="saveRow(this)" style="display:none;">Save</button>
-                        <button onclick="cancelRow()" style="display:none;">Cancel</button>
-                    </td>
-                </tr>`;
-        });
+        populateTable(data);
     } catch (error) {
         console.error("Error fetching data:", error);
         alert("Session expired. Please log in again.");
     }
 }
 
-function toggleEdit(element) {
-    if (editingRow !== null) {
-        element.classList.toggle("active");
-    }
+function populateTable(data) {
+    let tableBody = document.getElementById("tableBody");
+    tableBody.innerHTML = "";
+
+    data.forEach(row => {
+        tableBody.innerHTML += `
+            <tr data-id="${row.id}">
+                <td>${row.category}</td>
+                <td>${row.productName}</td>
+                <td>${row.packageName}</td>
+                <td>${row.available_on_ll ? 'True' : 'False'}</td>
+                <td><div class="toggle-switch ${row.visible ? 'active' : ''}" onclick="toggleEdit(this)"></div></td>
+                <td><div class="toggle-switch ${row.track_inventory ? 'active' : ''}" onclick="toggleEdit(this)"></div></td>
+                <td><input type="number" class="stock-input" value="${row.stock_inventory}" disabled></td>
+                <td>
+                    <button onclick="editRow(this)">Edit</button>
+                    <button onclick="saveRow(this)" style="display:none;">Save</button>
+                    <button onclick="cancelRow()" style="display:none;">Cancel</button>
+                </td>
+            </tr>`;
+    });
 }
 
-function editRow(button) {
-    if (editingRow !== null) return;
-    let row = button.closest("tr");
-    editingRow = row.getAttribute("data-id");
+// ✅ Sorting Function
+function sortTable(columnIndex) {
+    let table = document.getElementById("tableBody");
+    let rows = Array.from(table.rows);
 
-    row.querySelectorAll(".toggle-switch, .stock-input").forEach(el => {
-        el.style.pointerEvents = "auto";
-        if (el.tagName === "INPUT") {
-            el.removeAttribute("disabled");
+    // Toggle sorting direction
+    if (currentSortColumn === columnIndex) {
+        currentSortDirection = currentSortDirection === "asc" ? "desc" : "asc";
+    } else {
+        currentSortDirection = "asc";
+    }
+    currentSortColumn = columnIndex;
+
+    rows.sort((rowA, rowB) => {
+        let cellA = rowA.cells[columnIndex].textContent.trim();
+        let cellB = rowB.cells[columnIndex].textContent.trim();
+
+        if (!isNaN(cellA) && !isNaN(cellB)) {
+            return currentSortDirection === "asc" ? cellA - cellB : cellB - cellA;
+        } else {
+            return currentSortDirection === "asc"
+                ? cellA.localeCompare(cellB)
+                : cellB.localeCompare(cellA);
         }
     });
 
-    button.style.display = "none";
-    row.querySelector("button[onclick^='saveRow']").style.display = "inline";
-    row.querySelector("button[onclick^='cancelRow']").style.display = "inline";
+    table.innerHTML = "";
+    rows.forEach(row => table.appendChild(row));
 }
 
-async function saveRow(button) {
-    let row = button.closest("tr");
-    let id = row.getAttribute("data-id");
+// ✅ Search Filtering Function
+function filterTable() {
+    let searchInput = document.getElementById("searchInput").value.toLowerCase();
+    let rows = document.querySelectorAll("#tableBody tr");
 
-    if (!id) {
-        console.error("❌ Error: Row ID is missing!", row);
-        alert("Error saving data. Missing row ID.");
-        return;
-    }
-
-    let data = {
-        visible: row.querySelectorAll(".toggle-switch")[0].classList.contains("active"),
-        track_inventory: row.querySelectorAll(".toggle-switch")[1].classList.contains("active"),
-        stock_inventory: row.querySelector(".stock-input").value
-    };
-
-    try {
-        let response = await fetch(`https://biscicol.org/dff/v1/update/${id}`, {
-            method: "PUT",
-            headers: {
-                "Authorization": `Bearer ${localStorage.getItem("token")}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(data)
-        });
-
-        if (!response.ok) {
-            throw new Error("Failed to update data.");
-        }
-
-        cancelRow();
-    } catch (error) {
-        console.error("❌ Error updating data:", error);
-        alert("Failed to save changes. Please try again.");
-    }
-}
-
-function cancelRow() {
-    editingRow = null;
-    loadData();
+    rows.forEach(row => {
+        let text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchInput) ? "" : "none";
+    });
 }
 
 function logout() {

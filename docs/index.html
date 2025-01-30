@@ -17,16 +17,22 @@
     </form>
 
     <h2>Deck Family Farm Product Inventory</h2>
+
+    <!-- ✅ Search Bar -->
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Search..." onkeyup="filterTable()">
+    </div>
+
     <table>
         <thead>
             <tr>
-                <th>Category</th>
-                <th>Product Name</th>
-                <th>Package Name</th>
-                <th>Available On LL</th>
-                <th>Visible</th>
-                <th>Track Inventory</th>
-                <th>Stock Inventory</th>
+                <th onclick="sortTable(0)">Category ⬍</th>
+                <th onclick="sortTable(1)">Product Name ⬍</th>
+                <th onclick="sortTable(2)">Package Name ⬍</th>
+                <th onclick="sortTable(3)">Available On LL</th>
+                <th onclick="sortTable(4)">Visible ⬍</th>
+                <th onclick="sortTable(5)">Track Inventory ⬍</th>
+                <th onclick="sortTable(6)">Stock Inventory ⬍</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -38,4 +44,3 @@
     <script src="index.js"></script> <!-- ✅ Link to external JavaScript -->
 </body>
 </html>
-
