@@ -28,27 +28,68 @@
             padding: 8px 12px;
             margin-top: 10px;
         }
+        .toggle-switch {
+            cursor: pointer;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+            background-color: #ccc;
+            border-radius: 10px;
+            position: relative;
+            pointer-events: none;
+        }
+        .toggle-switch::before {
+            content: "";
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: white;
+            top: 1px;
+            left: 1px;
+            transition: 0.3s;
+        }
+        .toggle-switch.active {
+            background-color: #4CAF50;
+        }
+        .toggle-switch.active::before {
+            left: 20px;
+        }
+        .stock-input {
+            width: 60px;
+            text-align: center;
+            border: none;
+            background: transparent;
+            pointer-events: none;
+        }
+        .editable {
+            background: white;
+            border: 1px solid #ddd;
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body>
 
-    <h2>Login</h2>
-    <label>Username:</label>
-    <input type="text" id="username" placeholder="Enter Username">
-    <label>Password:</label>
-    <input type="password" id="password" placeholder="Enter Password">
-    <button onclick="login()">Login</button>
+    <form onsubmit="event.preventDefault(); login();" style="float: right;">
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+        <button type="button" onclick="logout()">Logout</button>
+    </form>
 
-    <h2>Product Inventory</h2>
+    <h2>Deck Family Farm Product Inventory</h2>
     <table>
         <thead>
             <tr>
+                <th>Category</th>
                 <th>Product Name</th>
                 <th>Package Name</th>
                 <th>Available On LL</th>
                 <th>Visible</th>
                 <th>Track Inventory</th>
                 <th>Stock Inventory</th>
+                <th>Actions</th> <!-- ✅ New column for Edit/Save/Cancel -->
             </tr>
         </thead>
         <tbody id="tableBody">
@@ -57,71 +98,153 @@
     </table>
 
     <script>
-        let token = "";
+let editingRow = null;
 
-function login() {
+async function login() {
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
 
-    fetch("http://localhost:3000/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log("Login Response:", data); // Debugging
+    try {
+        const response = await fetch("http://localhost:3000/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        });
 
-        if (data.token) {
-            token = data.token;
-            localStorage.setItem("jwt_token", token); // Store token in localStorage
-            alert("Login successful!");
+        const data = await response.json();
+        if (response.ok && data.token) {  
+            //alert("Login successful! ✅");
+            localStorage.setItem("token", data.token);
             loadData();
         } else {
-            alert("Login failed! Check username and password.");
+            alert("Login failed! ❌ " + (data.error || "Unknown error"));
         }
-    })
-    .catch(error => console.error("Error:", error));
+    } catch (error) {
+        console.error("Login Error:", error);
+        alert("Network error! ❌ Unable to reach server.");
+    }
 }
 
-        function loadData() {
-            if (!token) {
-                alert("Please log in first.");
-                return;
-            }
+async function loadData() {
+    const token = localStorage.getItem("token");
+    if (!token) {
+        alert("Please log in first.");
+        return;
+    }
 
-            fetch("http://localhost:3000/data", {
-                headers: { Authorization: `Bearer ${token}` },
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Unauthorized access. Please log in again.");
-                }
-                return response.json();
-            })
-            .then(data => {
-                let tableBody = document.getElementById("tableBody");
-                tableBody.innerHTML = ""; // Clear previous data
+    try {
+        const response = await fetch("http://localhost:3000/data", {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
 
-                data.forEach(row => {
-                    tableBody.innerHTML += `
-                        <tr>
-                            <td>${row.productName}</td>
-                            <td>${row.packageName}</td>
-                            <td>${row.available_on_ll}</td>
-                            <td>${row.visible}</td>
-                            <td>${row.track_inventory}</td>
-                            <td>${row.stock_inventory}</td>
-                        </tr>`;
-                });
-            })
-            .catch(error => {
-                console.error("Error fetching data:", error);
-                alert("Session expired. Please log in again.");
-            });
+        const data = await response.json();
+        let tableBody = document.getElementById("tableBody");
+        tableBody.innerHTML = "";
+
+        data.forEach(row => {
+            tableBody.innerHTML += `
+                <tr data-id="${row.id}">
+                    <td>${row.category}</td>
+                    <td>${row.productName}</td>
+                    <td>${row.packageName}</td>
+                    <td>${row.available_on_ll ? 'True' : 'False'}</td>
+                    <td><div class="toggle-switch ${row.visible ? 'active' : ''}" onclick="toggleEdit(this)"></div></td>
+                    <td><div class="toggle-switch ${row.track_inventory ? 'active' : ''}" onclick="toggleEdit(this)"></div></td>
+                    <td><input type="number" class="stock-input" value="${row.stock_inventory}" disabled></td>
+                    <td>
+                        <button onclick="editRow(${row.id}, this)">Edit</button>
+                        <button onclick="saveRow(this)" style="display:none;">Save</button>
+                        <button onclick="cancelRow()" style="display:none;">Cancel</button>
+                    </td>
+                </tr>`;
+        });
+    } catch (error) {
+        console.error("Error fetching data:", error);
+        alert("Session expired. Please log in again.");
+    }
+}
+
+function toggleEdit(element) {
+    if (editingRow !== null) {
+        element.classList.toggle("active");
+    }
+}
+
+function editRow(id, button) {
+    if (editingRow !== null) return;
+    editingRow = id;
+
+    let row = document.querySelector(`tr[data-id="${id}"]`);
+    row.querySelectorAll(".toggle-switch, .stock-input").forEach(el => {
+        el.style.pointerEvents = "auto";
+        if (el.tagName === "INPUT") {
+            el.removeAttribute("disabled");
         }
-    </script>
+    });
+
+    button.style.display = "none";
+    row.querySelector("button[onclick^='saveRow']").style.display = "inline";
+    row.querySelector("button[onclick^='cancelRow']").style.display = "inline";
+}
+
+async function saveRow(button) {
+    let row = button.closest("tr");  // ✅ Get the closest row
+    let id = row.getAttribute("data-id");  // ✅ Extract the ID
+    console.log(row)
+    console.log(id)
+
+    if (!id) {
+        console.error("❌ Error: Row ID is missing!", row);
+        alert("Error saving data. Missing row ID.");
+        return;
+    }
+
+    let data = {
+        visible: row.querySelectorAll(".toggle-switch")[0].classList.contains("active"),
+        track_inventory: row.querySelectorAll(".toggle-switch")[1].classList.contains("active"),
+        stock_inventory: row.querySelector(".stock-input").value
+    };
+
+    try {
+        let response = await fetch(`http://localhost:3000/update/${id}`, {
+            method: "PUT",
+            headers: {
+                "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to update data.");
+        }
+
+        //alert("✅ Changes saved successfully!");
+        cancelRow();  // Lock the row after saving
+    } catch (error) {
+        console.error("❌ Error updating data:", error);
+        alert("Failed to save changes. Please try again.");
+    }
+}
+
+function cancelRow() {
+    editingRow = null;
+    loadData();
+}
+
+function logout() {
+    localStorage.removeItem("token");
+    document.getElementById("tableBody").innerHTML = "";
+    alert("Logged out!");
+}
+
+window.onload = function() {
+    if (localStorage.getItem("token")) {
+        loadData();
+    }
+};
+</script>
 
 </body>
 </html>
-

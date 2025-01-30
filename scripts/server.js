@@ -1,15 +1,24 @@
 require("dotenv").config();
 const express = require("express");
-const mysql = require("mysql2"); // <-- Change from 'mysql' to 'mysql2'
+const mysql = require("mysql2");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 
 const app = express();
 app.use(express.json());
-app.use(cors());
 
-// Database connection using .env variables
+app.use(cors({
+  origin: function (origin, callback) {
+    callback(null, true); // ✅ Allows all origins dynamically (but still supports credentials)
+  },
+  credentials: true, // ✅ Needed if using authentication (cookies or Authorization headers)
+  methods: "GET,POST,PUT,DELETE,OPTIONS",
+  allowedHeaders: "Content-Type,Authorization"
+}));
+
+
+// ✅ Database Connection
 const db = mysql.createConnection({
   host: process.env.DFF_DB_HOST,
   port: process.env.DFF_DB_PORT,
@@ -23,12 +32,10 @@ db.connect((err) => {
     console.error("Database connection error:", err);
     process.exit(1);
   }
-  console.log("Connected to database");
+  console.log("✅ Connected to database");
 });
 
-// Rest of your code remains the same...
-
-// User registration
+// ✅ User Registration
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -37,61 +44,80 @@ app.post("/register", async (req, res) => {
     "INSERT INTO users (username, password) VALUES (?, ?)",
     [username, hashedPassword],
     (err, result) => {
-      if (err) return res.status(500).json({ error: err });
+      if (err) return res.status(500).json({ error: err.message });
       res.json({ message: "User registered successfully" });
     }
   );
 });
 
+// ✅ User Login (Returns JWT Token)
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
-  console.log("Login Attempt:", username); // Debugging
 
   db.query("SELECT * FROM users WHERE username = ?", [username], async (err, results) => {
     if (err || results.length === 0) {
-      console.error("User not found:", err || username);
       return res.status(400).json({ error: "User not found" });
     }
 
-    console.log("DB User Found:", results[0]); // Debugging
-
     const validPassword = await bcrypt.compare(password, results[0].password);
     if (!validPassword) {
-      console.error("Invalid password for user:", username);
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    const token = jwt.sign({ userId: results[0].id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-    res.json({ token });
+    // ✅ Generate JWT Token
+    const token = jwt.sign({ userId: results[0].id }, process.env.JWT_SECRET, { expiresIn: "90d" });
+
+    //console.log("✅ Generated Token:", token);
+
+    res.json({ message: "Login successful", token });
   });
 });
 
-// Get tabular data (protected)
+// ✅ Middleware: Authenticate Token from Header (No Cookies)
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(403).json({ error: "Unauthorized. Please log in." });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: "Invalid token. Please log in again." });
+    }
+
+    req.user = user;
+    next();
+  });
+}
+
+// ✅ Protected Route: Fetch Inventory Data
 app.get("/data", authenticateToken, (req, res) => {
   const sqlQuery = `
-    SELECT productName, packageName, available_on_ll, visible, track_inventory, stock_inventory 
-    FROM pricelist`;
+    SELECT id, category, productName, packageName, available_on_ll, visible, track_inventory, stock_inventory
+    FROM pricelist order by category,productName`;
 
   db.query(sqlQuery, (err, results) => {
     if (err) {
-      console.error("Database query error:", err);
       return res.status(500).json({ error: err.message });
     }
     res.json(results);
   });
 });
 
-// Middleware to verify JWT
-function authenticateToken(req, res, next) {
-  const token = req.headers["authorization"];
-  if (!token) return res.sendStatus(403);
+app.put("/update/:id", authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { available_on_ll, visible, track_inventory, stock_inventory } = req.body;
 
-  jwt.verify(token.split(" ")[1], process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
+  const sqlQuery = `UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=? WHERE id=?`;
+  
+  db.query(sqlQuery, [visible, track_inventory, stock_inventory, id], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ message: "Updated successfully" });
   });
-}
+});
 
-app.listen(3000, () => console.log("Server running on port 3000"));
 
+// ✅ Start Server
+app.listen(3000, () => console.log("🚀 Server running on port 3000"));
