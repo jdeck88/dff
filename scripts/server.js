@@ -1,4 +1,6 @@
 const fs = require("fs");
+const dotenv = require("dotenv");
+
 // ✅ Check if the first `.env` file exists
 if (fs.existsSync("/home/exouser/code/dff/scripts/.env")) {
     console.log("Loading environment variables from .env for server");
@@ -13,7 +15,6 @@ else if (fs.existsSync("/Users/jdeck/code/dff/scripts/.env")) {
 else {
     console.warn("⚠️ No .env file found! Using default system environment variables.");
 }
-require("dotenv").config();
 const express = require("express");
 const mysql = require("mysql2");
 const bcrypt = require("bcryptjs");
