@@ -1,0 +1,77 @@
+/* ✅ General Styling */
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+/* ✅ Sticky Table Header */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f4f4f4;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* ✅ Login Form (Float Right) */
+form {
+    float: right;
+}
+
+/* ✅ Toggle Switch Styling */
+.toggle-switch {
+    cursor: pointer;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    background-color: #ccc;
+    border-radius: 10px;
+    position: relative;
+    pointer-events: none;
+}
+
+.toggle-switch::before {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: white;
+    top: 1px;
+    left: 1px;
+    transition: 0.3s;
+}
+
+.toggle-switch.active {
+    background-color: #4CAF50;
+}
+
+.toggle-switch.active::before {
+    left: 20px;
+}
+
+/* ✅ Editable Stock Input */
+.stock-input {
+    width: 60px;
+    text-align: center;
+    border: none;
+    background: transparent;
+    pointer-events: none;
+}
+
+.editable {
+    background: white;
+    border: 1px solid #ddd;
+    pointer-events: auto;
+}
