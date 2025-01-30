@@ -1,3 +1,18 @@
+const fs = require("fs");
+// ✅ Check if the first `.env` file exists
+if (fs.existsSync("/home/exouser/code/dff/scripts/.env")) {
+    console.log("Loading environment variables from .env for server");
+    dotenv.config({ path: "/home/exouser/code/dff/scripts/.env" });
+} 
+// ✅ If not found, use the second `.env.production` file
+else if (fs.existsSync("/Users/jdeck/code/dff/scripts/.env")) {
+    console.log("Loading environment variables from .env for local");
+    dotenv.config({ path: "/Users/jdeck/code/dff/scripts/.env" });
+} 
+// ❌ If neither file is found, log a warning
+else {
+    console.warn("⚠️ No .env file found! Using default system environment variables.");
+}
 require("dotenv").config();
 const express = require("express");
 const mysql = require("mysql2");
