@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Inventory</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        button {
+            cursor: pointer;
+            padding: 8px 12px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Login</h2>
+    <label>Username:</label>
+    <input type="text" id="username" placeholder="Enter Username">
+    <label>Password:</label>
+    <input type="password" id="password" placeholder="Enter Password">
+    <button onclick="login()">Login</button>
+
+    <h2>Product Inventory</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Product Name</th>
+                <th>Package Name</th>
+                <th>Available On LL</th>
+                <th>Visible</th>
+                <th>Track Inventory</th>
+                <th>Stock Inventory</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- Data will be populated dynamically here -->
+        </tbody>
+    </table>
+
+    <script>
+        let token = "";
+
+function login() {
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+
+    fetch("http://localhost:3000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Login Response:", data); // Debugging
+
+        if (data.token) {
+            token = data.token;
+            localStorage.setItem("jwt_token", token); // Store token in localStorage
+            alert("Login successful!");
+            loadData();
+        } else {
+            alert("Login failed! Check username and password.");
+        }
+    })
+    .catch(error => console.error("Error:", error));
+}
+
+        function loadData() {
+            if (!token) {
+                alert("Please log in first.");
+                return;
+            }
+
+            fetch("http://localhost:3000/data", {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Unauthorized access. Please log in again.");
+                }
+                return response.json();
+            })
+            .then(data => {
+                let tableBody = document.getElementById("tableBody");
+                tableBody.innerHTML = ""; // Clear previous data
+
+                data.forEach(row => {
+                    tableBody.innerHTML += `
+                        <tr>
+                            <td>${row.productName}</td>
+                            <td>${row.packageName}</td>
+                            <td>${row.available_on_ll}</td>
+                            <td>${row.visible}</td>
+                            <td>${row.track_inventory}</td>
+                            <td>${row.stock_inventory}</td>
+                        </tr>`;
+                });
+            })
+            .catch(error => {
+                console.error("Error fetching data:", error);
+                alert("Session expired. Please log in again.");
+            });
+        }
+    </script>
+
+</body>
+</html>
+
