@@ -1,3 +1,4 @@
+This directory requires installation of .env file defining variable values
 Scripts:
 
 server.js -- server script that gives us the ability to modify inventory items

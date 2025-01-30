@@ -120,4 +120,4 @@ app.put("/update/:id", authenticateToken, (req, res) => {
 
 
 // ✅ Start Server
-app.listen(3000, () => console.log("🚀 Server running on port 3000"));
+app.listen(3401, () => console.log("🚀 Server running on port 3401"));

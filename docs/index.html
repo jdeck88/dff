@@ -105,7 +105,7 @@ async function login() {
     const password = document.getElementById("password").value;
 
     try {
-        const response = await fetch("http://localhost:3000/login", {
+        const response = await fetch("http://biscicol.org/dff/v1/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password })
@@ -133,7 +133,7 @@ async function loadData() {
     }
 
     try {
-        const response = await fetch("http://localhost:3000/data", {
+        const response = await fetch("http://biscicol.org/dff/v1/data", {
             method: "GET",
             headers: { "Authorization": `Bearer ${token}` }
         });
@@ -207,7 +207,7 @@ async function saveRow(button) {
     };
 
     try {
-        let response = await fetch(`http://localhost:3000/update/${id}`, {
+        let response = await fetch(`http://biscicol.org/dff/v1/update/${id}`, {
             method: "PUT",
             headers: {
                 "Authorization": `Bearer ${localStorage.getItem("token")}`,
