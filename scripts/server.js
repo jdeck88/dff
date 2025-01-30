@@ -37,7 +37,7 @@ db.connect((err) => {
 });
 
 // ✅ User Registration
-app.post("/register", async (req, res) => {
+app.post("/dff/v1/register", async (req, res) => {
   const { username, password } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -52,7 +52,7 @@ app.post("/register", async (req, res) => {
 });
 
 // ✅ User Login (Returns JWT Token)
-app.post("/login", (req, res) => {
+app.post("/dff/v1/login", (req, res) => {
   const { username, password } = req.body;
 
   db.query("SELECT * FROM users WHERE username = ?", [username], async (err, results) => {
@@ -94,7 +94,7 @@ function authenticateToken(req, res, next) {
 }
 
 // ✅ Protected Route: Fetch Inventory Data
-app.get("/data", authenticateToken, (req, res) => {
+app.get("/dff/v1/data", authenticateToken, (req, res) => {
   const sqlQuery = `
     SELECT id, category, productName, packageName, available_on_ll, visible, track_inventory, stock_inventory
     FROM pricelist order by category,productName`;
@@ -107,7 +107,7 @@ app.get("/data", authenticateToken, (req, res) => {
   });
 });
 
-app.put("/update/:id", authenticateToken, (req, res) => {
+app.put("/dff/v1/update/:id", authenticateToken, (req, res) => {
   const { id } = req.params;
   const { available_on_ll, visible, track_inventory, stock_inventory } = req.body;
 
