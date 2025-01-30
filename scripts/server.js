@@ -25,14 +25,26 @@ app.use(express.json());
 
 const cors = require("cors");
 
+const allowedOrigins = [
+  "http://127.0.0.1:5500",  // ✅ Localhost (Live Server Development)
+  "http://localhost:3000",  // ✅ Local Backend (if needed)
+  "https://jdeck88.github.io"  // ✅ Production (GitHub Pages)
+];
+
 app.use(cors({
-  origin: "https://jdeck88.github.io", // ✅ Allow requests from GitHub Pages
-  credentials: true,  // ✅ Allow cookies and Authorization headers
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true, // ✅ Allow cookies & authentication headers
   methods: "GET,POST,PUT,DELETE,OPTIONS",
   allowedHeaders: "Content-Type,Authorization"
 }));
 
-// ✅ Automatically handle OPTIONS requests
+// ✅ Handle Preflight (OPTIONS) Requests
 app.options("*", cors()); 
 
 // ✅ Database Connection
