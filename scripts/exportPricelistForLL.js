@@ -96,7 +96,7 @@ async function exportPricelistToExcel() {
         });
 
         // Save the file
-        const outputFile = 'data/output-pricelist.xlsx';
+        const outputFile = 'data/locallineImportPricelist.xlsx';
         await workbook.xlsx.writeFile(outputFile);
         console.log(`✅ Excel file created: ${outputFile}`);
     } catch (error) {

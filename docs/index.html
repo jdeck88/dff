@@ -18,10 +18,14 @@
 
     <h2>Deck Family Farm Product Inventory</h2>
 
-    <!-- ✅ Search Bar -->
+    <!-- ✅ Search Container -->
     <div class="search-container">
         <input type="text" id="searchInput" placeholder="Search..." onkeyup="filterTable()">
+        <select id="categoryFilter" onchange="filterTable()">
+            <option value="">All Categories</option> <!-- ✅ Default option to show all -->
+        </select>
     </div>
+    
 
     <table>
         <thead>

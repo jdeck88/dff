@@ -1,12 +1,15 @@
+Scripts directory contains node scripts for working with the DFF database and LL and Square.
+
 This directory requires installation of .env file defining variable values
-Scripts:
 
-server.js -- server script that gives us the ability to modify inventory items
+`server.js` -- server script that we run on biscicol.org server using pm2 to control job. This is the API service for modifying the database for updating inventory items
 
-exportPricelist.js -- create a spreadsheet 
+`exportPricelistForLL.js` -- create a spreadsheet that i can use to import to LL.  This script reads the database and then creates a spreadsheet that we can bulk import to LL.  Doing this will update all inventory.  If there are any new products they will be inserted into LL.  Run the `populateIdentifiersFromLL.js` script after this script.
 
-product_download.js -- connects to Local Line and downloads "Local Line Product ID", "Package ID" and "internal ID". Populates a table called localline which we can map to these identifiers into the pricelist table
+`exportPricelistForViewing.js` -- create a spreadsheet that we is written to the docs directory.  This spreadsheet is the viewable pricelist for all to see retail prices. Purpose is to run this once per week and we can make this available for people to download.
 
-utilities.js -- utilities for connecting to database, etc.. copied from ffcsa_scripts/localline
+`populateIdentifiersFromLL.js` -- connects to Local Line and downloads the "Local Line Product ID", "Package ID" and "internal ID". Populates a table called localline in back-end database. This then uses the "internal ID" to update the localline product identifiers in the pricelist table. 
 
-createUser.js -- run one time to create a user and hash in database that has access
+`utilities.js` -- utilities for connecting to database, etc.. copied from ffcsa_scripts/localline
+
+`createUser.js` -- run to create a user and hash in database that has access

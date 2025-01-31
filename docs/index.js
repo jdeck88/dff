@@ -40,12 +40,42 @@ async function loadData() {
         });
 
         const data = await response.json();
+        populateCategoryFilter(data); // ✅ Populate dropdown dynamically
         populateTable(data);
     } catch (error) {
         console.error("Error fetching data:", error);
         alert("Session expired. Please log in again.");
     }
 }
+
+// ✅ Populate Category Dropdown
+function populateCategoryFilter(data) {
+    let categoryFilter = document.getElementById("categoryFilter");
+    let categories = [...new Set(data.map(item => item.category))]; // ✅ Get unique categories
+
+    categoryFilter.innerHTML = `<option value="">All Categories</option>`; // Reset options
+    categories.forEach(category => {
+        categoryFilter.innerHTML += `<option value="${category}">${category}</option>`;
+    });
+}
+
+// ✅ Filter Table by Search & Category
+function filterTable() {
+    let searchInput = document.getElementById("searchInput").value.toLowerCase();
+    let categoryFilter = document.getElementById("categoryFilter").value;
+    let rows = document.querySelectorAll("#tableBody tr");
+
+    rows.forEach(row => {
+        let text = row.textContent.toLowerCase();
+        let category = row.cells[0].textContent; // ✅ Get category from first column
+
+        let matchesSearch = text.includes(searchInput);
+        let matchesCategory = categoryFilter === "" || category === categoryFilter;
+
+        row.style.display = matchesSearch && matchesCategory ? "" : "none";
+    });
+}
+
 
 function populateTable(data) {
     let tableBody = document.getElementById("tableBody");
@@ -98,17 +128,6 @@ function sortTable(columnIndex) {
 
     table.innerHTML = "";
     rows.forEach(row => table.appendChild(row));
-}
-
-// ✅ Search Filtering Function
-function filterTable() {
-    let searchInput = document.getElementById("searchInput").value.toLowerCase();
-    let rows = document.querySelectorAll("#tableBody tr");
-
-    rows.forEach(row => {
-        let text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchInput) ? "" : "none";
-    });
 }
 
 function logout() {
