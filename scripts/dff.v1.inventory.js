@@ -31,22 +31,37 @@ app.use(cors({
   origin: function (origin, callback) {
     try {
       console.log("CORS Request Origin:", origin);
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
+
+      // Handle cases where origin is missing (e.g., same-origin requests)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Validate the origin URL to catch malformed URIs
+      try {
+        new URL(origin); // Throws if malformed
+      } catch (error) {
+        console.warn(`🚨 Malformed Origin Detected: ${origin}`);
+        return callback(new Error("Invalid origin format"), false);
+      }
+
+      // Check if origin is allowed
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
       } else {
         console.warn(`🚫 CORS Blocked: ${origin}`);
-        callback(new Error("Not allowed by CORS"));
+        return callback(new Error("Not allowed by CORS"), false);
       }
+
     } catch (error) {
       console.error("CORS Error:", error);
-      callback(new Error("CORS validation failed"));
+      return callback(new Error("CORS validation failed"), false);
     }
   },
   credentials: true,
   methods: "GET,POST,PUT,DELETE,OPTIONS",
   allowedHeaders: "Content-Type,Authorization"
 }));
-
 // ✅ Handle Preflight (OPTIONS) Requests
 app.options("*", cors());
 
