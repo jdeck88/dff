@@ -42,7 +42,8 @@ app.use(cors({
         new URL(origin); // Throws if malformed
       } catch (error) {
         console.warn(`🚨 Malformed Origin Detected: ${origin}`);
-        return callback(new Error("Invalid origin format"), false);
+        //return callback(new Error("Invalid origin format"), false);
+        return callback(null, false);
       }
 
       // Check if origin is allowed
@@ -50,12 +51,14 @@ app.use(cors({
         return callback(null, true);
       } else {
         console.warn(`🚫 CORS Blocked: ${origin}`);
-        return callback(new Error("Not allowed by CORS"), false);
+        //return callback(new Error("Not allowed by CORS"), false);
+        return callback(null, false);
       }
 
     } catch (error) {
       console.error("CORS Error:", error);
-      return callback(new Error("CORS validation failed"), false);
+      //return callback(new Error("CORS validation failed"), false);
+      return callback(null, false);
     }
   },
   credentials: true,
