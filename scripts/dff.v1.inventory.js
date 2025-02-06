@@ -32,10 +32,18 @@ const allowedOrigins = [
 app.use(cors({
     origin: function (origin, callback) {
         console.log("CORS Request Origin:", origin);
-        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        if (!origin) {
+            console.warn(`🚨 No origin: ${origin}`);
+            return callback(null, false);
+        } 
+        if (!allowedOrigins.includes(origin)) {
+            console.warn(`🚨 Not in approved list of origins: ${origin}`);
+            return callback(null, false);
+        }
         
         try {
-            new URL(origin); // Validate URL
+            // This is the only place where we return our callback
+            new URL(origin); 
         } catch (error) {
             console.warn(`🚨 Malformed Origin: ${origin}`);
             return callback(null, false);
