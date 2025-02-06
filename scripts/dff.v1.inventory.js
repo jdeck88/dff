@@ -42,15 +42,14 @@ app.use(cors({
         }
         
         try {
-            // This is the only place where we return our callback
             new URL(origin); 
         } catch (error) {
             console.warn(`🚨 Malformed Origin: ${origin}`);
             return callback(null, false);
         }
 
-        console.warn(`🚫 CORS Blocked: ${origin}`);
-        return callback(null, false);
+        console.warn(`CORS Allowedd: ${origin}`);
+        return callback(null, true);
     },
     credentials: true,
     methods: "GET,POST,PUT,DELETE,OPTIONS",
