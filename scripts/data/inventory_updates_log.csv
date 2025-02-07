@@ -1,0 +1,7 @@
+id,productName,packageName,visible,track_inventory,stock_inventory,timestamp
+15,Beef Flat Iron Steak,0.70 - 1.10 lbs,true,false,0,2025-02-07T21:14:11.208Z
+19,Beef Heart,2.50 - 3.5 lbs,true,false,0,2025-02-07T21:14:11.214Z
+20,Beef Kidney,0.80 - 1.00 lbs,true,false,0,2025-02-07T21:14:11.296Z
+19,Beef Heart,2.50 - 3.5 lbs,false,false,0,2025-02-07T21:17:09.194Z
+15,Beef Flat Iron Steak,0.70 - 1.10 lbs,false,false,0,2025-02-07T21:17:09.198Z
+20,Beef Kidney,0.80 - 1.00 lbs,false,false,0,2025-02-07T21:17:09.272Z

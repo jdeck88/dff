@@ -32,16 +32,13 @@ const allowedOrigins = [
 // ✅ Enhanced CORS Handling
 app.use(cors({
     origin: function (origin, callback) {
-        console.log("CORS Request Origin:", origin);
         if (!origin) {
             console.warn(`🚨 No origin: ${origin}`);
             return res.status(400).json({ error: "Bad Request: No origin" });
-            //return callback(null, false);
         } 
         if (!allowedOrigins.includes(origin)) {
             console.warn(`🚨 Not in approved list of origins: ${origin}`);
             return res.status(400).json({ error: "Not an approved origin" });
-            //return callback(null, false);
         }
         
         try {
@@ -49,7 +46,6 @@ app.use(cors({
         } catch (error) {
             console.warn(`🚨 Malformed Origin: ${origin}`);
             return res.status(400).json({ error: "Malformed Origin" });
-            //return callback(null, false);
         }
 
         return callback(null, true);
@@ -211,6 +207,8 @@ app.put("/dff/v1/update/:id", authenticateToken, (req, res) => {
                 res.json({ message: "Updated successfully" });
             }
         );
+    });
+});
 
 // ✅ Global Error Handler
 app.use((err, req, res, next) => {
