@@ -193,7 +193,7 @@ app.put("/dff/v1/update/:id", authenticateToken, (req, res) => {
                 if (err) return res.status(500).json({ error: err.message });
 
                 // Append change to CSV file
-                const logFilePath = path.join(__dirname, "data/inventory_updates_log.csv");
+                const logFilePath = path.join(__dirname, "../docs/inventory_updates_log.csv");
                 const logEntry = `${id},${productName},${packageName},${visible},${track_inventory},${stock_inventory},${timestamp}\n`;
 
                 // Ensure CSV file has headers if it doesn't exist
