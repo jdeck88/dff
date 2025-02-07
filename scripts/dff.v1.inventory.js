@@ -34,18 +34,21 @@ app.use(cors({
         console.log("CORS Request Origin:", origin);
         if (!origin) {
             console.warn(`🚨 No origin: ${origin}`);
-            return callback(null, false);
+            return res.status(400).json({ error: "Bad Request: No origin" });
+            //return callback(null, false);
         } 
         if (!allowedOrigins.includes(origin)) {
             console.warn(`🚨 Not in approved list of origins: ${origin}`);
-            return callback(null, false);
+            return res.status(400).json({ error: "Not an approved origin" });
+            //return callback(null, false);
         }
         
         try {
             new URL(origin); 
         } catch (error) {
             console.warn(`🚨 Malformed Origin: ${origin}`);
-            return callback(null, false);
+            return res.status(400).json({ error: "Malformed Origin" });
+            //return callback(null, false);
         }
 
         console.warn(`CORS Allowedd: ${origin}`);
