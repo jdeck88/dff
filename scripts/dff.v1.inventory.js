@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const helmet = require("helmet"); // ✅ Security headers
+const path = require("path");
 
 // ✅ Load Environment Variables Safely
 if (fs.existsSync("/home/exouser/code/dff/scripts/.env")) {
@@ -51,7 +52,6 @@ app.use(cors({
             //return callback(null, false);
         }
 
-        console.warn(`CORS Allowedd: ${origin}`);
         return callback(null, true);
     },
     credentials: true,
@@ -91,7 +91,7 @@ app.use((req, res, next) => {
 
 // ✅ Request Logging for Debugging
 app.use((req, res, next) => {
-    console.log(`📌 ${req.method} ${req.originalUrl}`);
+    //console.log(`📌 ${req.method} ${req.originalUrl}`);
     next();
 });
 
@@ -175,8 +175,6 @@ app.get("/dff/v1/data", authenticateToken, (req, res) => {
     });
 });
 
-const fs = require("fs");
-const path = require("path");
 
 // ✅ Secure Data Update Route (Protected)
 app.put("/dff/v1/update/:id", authenticateToken, (req, res) => {
@@ -184,30 +182,35 @@ app.put("/dff/v1/update/:id", authenticateToken, (req, res) => {
     const { visible, track_inventory, stock_inventory } = req.body;
     const timestamp = new Date().toISOString();
 
-    // Update database
-    db.query(
-        "UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=? WHERE id=?",
-        [visible, track_inventory, stock_inventory, id],
-        (err) => {
-            if (err) return res.status(500).json({ error: err.message });
+    // Fetch productName and packageName before updating
+    db.query("SELECT productName, packageName FROM pricelist WHERE id = ?", [id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) return res.status(404).json({ error: "Product not found" });
 
-            // Append change to CSV file
-            const logFilePath = path.join(__dirname, "data/inventory_updates_log.csv");
-            const logEntry = `${timestamp},${id},${visible},${track_inventory},${stock_inventory}\n`;
+        const { productName, packageName } = results[0];
 
-            // Ensure CSV file has headers if it doesn't exist
-            if (!fs.existsSync(logFilePath)) {
-                fs.writeFileSync(logFilePath, "timestamp,id,visible,track_inventory,stock_inventory\n");
+        // Perform the update
+        db.query(
+            "UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=? WHERE id=?",
+            [visible, track_inventory, stock_inventory, id],
+            (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+
+                // Append change to CSV file
+                const logFilePath = path.join(__dirname, "data/inventory_updates_log.csv");
+                const logEntry = `${id},${productName},${packageName},${visible},${track_inventory},${stock_inventory},${timestamp}\n`;
+
+                // Ensure CSV file has headers if it doesn't exist
+                if (!fs.existsSync(logFilePath)) {
+                    fs.writeFileSync(logFilePath, "id,productName,packageName,visible,track_inventory,stock_inventory,timestamp\n");
+                }
+
+                // Append data to the CSV file
+                fs.appendFileSync(logFilePath, logEntry, "utf8");
+
+                res.json({ message: "Updated successfully" });
             }
-
-            // Append data to the CSV file
-            fs.appendFileSync(logFilePath, logEntry, "utf8");
-
-            res.json({ message: "Updated successfully" });
-        }
-    );
-});
-
+        );
 
 // ✅ Global Error Handler
 app.use((err, req, res, next) => {
