@@ -175,20 +175,39 @@ app.get("/dff/v1/data", authenticateToken, (req, res) => {
     });
 });
 
+const fs = require("fs");
+const path = require("path");
+
 // ✅ Secure Data Update Route (Protected)
 app.put("/dff/v1/update/:id", authenticateToken, (req, res) => {
     const { id } = req.params;
     const { visible, track_inventory, stock_inventory } = req.body;
+    const timestamp = new Date().toISOString();
 
+    // Update database
     db.query(
         "UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=? WHERE id=?",
         [visible, track_inventory, stock_inventory, id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
+
+            // Append change to CSV file
+            const logFilePath = path.join(__dirname, "data/inventory_updates_log.csv");
+            const logEntry = `${timestamp},${id},${visible},${track_inventory},${stock_inventory}\n`;
+
+            // Ensure CSV file has headers if it doesn't exist
+            if (!fs.existsSync(logFilePath)) {
+                fs.writeFileSync(logFilePath, "timestamp,id,visible,track_inventory,stock_inventory\n");
+            }
+
+            // Append data to the CSV file
+            fs.appendFileSync(logFilePath, logEntry, "utf8");
+
             res.json({ message: "Updated successfully" });
         }
     );
 });
+
 
 // ✅ Global Error Handler
 app.use((err, req, res, next) => {
