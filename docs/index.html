@@ -284,26 +284,41 @@ async function applyChanges() {
     });
 
     try {
-        await Promise.all(updates.map(async ({ id, data }) => {
-            await fetch(`https://biscicol.org/dff/v1/update/${id}`, {
-                method: "PUT",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(data)
-            });
-        }));
-		const result = await response.json();
+    // Execute all update requests
+    const responses = await Promise.all(updates.map(async ({ id, data }) => {
+        const response = await fetch(`https://biscicol.org/dff/v1/update/${id}`, {
+            method: "PUT",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
 
-		alert(`Response:\n${JSON.stringify(result, null, 2)}`);
+        // Parse the response JSON
+        const result = await response.json();
 
-        editedRows.clear();
-        document.getElementById("applyChanges").disabled = true;
-        loadData();
-    } catch (error) {
-        alert("Failed to save changes.");
-    }
+        // Return the response in a structured format
+        return { id, result };
+    }));
+
+    // Format responses for display
+    const alertMessage = responses.map(({ id, result }) =>
+        `ID: ${id}\nResponse: ${JSON.stringify(result, null, 2)}`
+    ).join("\n\n");
+
+    // Show in alert
+    alert(`Responses:\n${alertMessage}`);
+
+    // Clear edited rows and refresh data
+    editedRows.clear();
+    document.getElementById("applyChanges").disabled = true;
+    loadData();
+} catch (error) {
+    alert("Failed to save changes.");
+    console.error("Error updating items:", error);
+}
+
 }
 
 function logout() {
