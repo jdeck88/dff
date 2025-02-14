@@ -294,8 +294,10 @@ async function applyChanges() {
                 body: JSON.stringify(data)
             });
         }));
+		const result = await response.json();
 
-        alert("All changes saved successfully!");
+		alert(`Response:\n${JSON.stringify(result, null, 2)}`);
+
         editedRows.clear();
         document.getElementById("applyChanges").disabled = true;
         loadData();
