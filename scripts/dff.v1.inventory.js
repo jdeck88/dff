@@ -186,7 +186,6 @@ app.get("/dff/v1/data", authenticateToken, (req, res) => {
 
 
 // ✅ Secure Data Update Route (Protected)
-
 app.put("/dff/v1/update/:id", authenticateToken, async (req, res) => {
     data = await utilities.getAccessToken();
     const accessToken = JSON.parse(data).access;
@@ -196,43 +195,48 @@ app.put("/dff/v1/update/:id", authenticateToken, async (req, res) => {
     const { visible, track_inventory, stock_inventory } = req.body;
     const timestamp = new Date().toISOString();
 
-    // Fetch productName and packageName before updating
     db.query("SELECT productName, packageName, localLineProductID FROM pricelist WHERE id = ?", [id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         if (results.length === 0) return res.status(404).json({ error: "Product not found" });
 
-        const { productName, packageName, localLineProductID } = results[0]; // Assume you have a `localline_id` column
+        const { productName, packageName, localLineProductID } = results[0];
 
-        // Perform the update
+        // ✅ Structured response object
+        let updateStatus = {
+            id: id,
+            productName: productName,
+            databaseUpdate: false,
+            localLineUpdate: false,
+        };
+
+        // Perform the database update
         db.query(
             "UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=? WHERE id=?",
             [visible, track_inventory, stock_inventory, id],
             async (err) => {
                 if (err) return res.status(500).json({ error: err.message });
 
+                updateStatus.databaseUpdate = true; // ✅ Mark DB update as successful
+
                 // Append change to CSV file
                 const logFilePath = path.join(__dirname, "../docs/inventory_updates_log.csv");
                 const logEntry = `${id},${productName},${packageName},${visible},${track_inventory},${stock_inventory},${timestamp}\n`;
 
-                // Ensure CSV file has headers if it doesn't exist
                 if (!fs.existsSync(logFilePath)) {
                     fs.writeFileSync(logFilePath, "id,productName,packageName,visible,track_inventory,stock_inventory,timestamp\n");
                 }
-
-                // Append data to the CSV file
                 fs.appendFileSync(logFilePath, logEntry, "utf8");
 
-                // 🔹 Call LocalLine API after database update
+                // ✅ Attempt LocalLine API update
                 if (localLineProductID) {
                     try {
-
                         let payload = {
-                            visible: Boolean(visible), 
+                            visible: Boolean(visible),
                             track_inventory: Boolean(track_inventory)
                         };
 
                         if (track_inventory === true && Number(stock_inventory) > 0) {
-                            payload.set_inventory = Number(stock_inventory); 
+                            payload.set_inventory = Number(stock_inventory);
                         }
 
                         if (Object.keys(payload).length > 0) {
@@ -244,17 +248,37 @@ app.put("/dff/v1/update/:id", authenticateToken, async (req, res) => {
                             });
 
                             console.log(`✅ LocalLine product ${localLineProductID} updated:`, payload);
+                            updateStatus.localLineUpdate = true;
                         }
                     } catch (error) {
+                        utilities.sendEmail({
+                            from: "jdeck88@gmail.com",
+                            to: "jdeck88@gmail.com",
+                            subject: "LocalLine API update failed",
+                            text: `API update failed for ${localLineProductID}`
+                        });
+
                         console.error(`❌ LocalLine API update failed for ${localLineProductID}:`, error.response?.data || error.message);
+                        updateStatus.localLineUpdate = false;
                     }
+                } else {
+                    utilities.sendEmail({
+                        from: "jdeck88@gmail.com",
+                        to: "jdeck88@gmail.com",
+                        subject: "LocalLine API update failed",
+                        text: `We do not have a record of this product in LocalLine: ${localLineProductID}`
+                    });
+
+                    console.error(`❌ No record found in LocalLine for ${localLineProductID}`);
+                    updateStatus.localLineUpdate = false;
                 }
 
-                res.json({ message: "Updated successfully" });
+                res.json(updateStatus);
             }
         );
     });
 });
+
 // ✅ Global Error Handler
 app.use((err, req, res, next) => {
     if (err instanceof URIError) {
