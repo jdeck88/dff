@@ -17,7 +17,6 @@ const limiter = rateLimit({
     message: "Too many requests, please try again later."
 });
 
-app.use(limiter); // Apply rate limiting globally
 
 // ✅ Load Environment Variables Safely
 if (fs.existsSync("/home/exouser/code/dff/scripts/.env")) {
@@ -33,6 +32,7 @@ if (fs.existsSync("/home/exouser/code/dff/scripts/.env")) {
 const app = express();
 app.use(express.json());
 app.use(helmet()); // ✅ Adds security headers to protect against various attacks
+app.use(limiter); // Apply rate limiting globally
 
 const allowedOrigins = [
     "http://127.0.0.1:5500",
