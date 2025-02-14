@@ -7,6 +7,17 @@ const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const helmet = require("helmet"); // ✅ Security headers
 const path = require("path");
+const axios = require("axios");
+const utilities = require('./utilities');
+const rateLimit = require("express-rate-limit");
+
+const limiter = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: "Too many requests, please try again later."
+});
+
+app.use(limiter); // Apply rate limiting globally
 
 // ✅ Load Environment Variables Safely
 if (fs.existsSync("/home/exouser/code/dff/scripts/.env")) {
@@ -34,18 +45,18 @@ app.use(cors({
     origin: function (origin, callback) {
         if (!origin) {
             console.warn(`🚨 No origin: ${origin}`);
-            return callback(new Error("Bad Request: No origin"), false);
+            //return callback(new Error("Bad Request: No origin"), false);
         }
         if (!allowedOrigins.includes(origin)) {
             console.warn(`🚨 Not in approved list of origins: ${origin}`);
-            return callback(new Error("Not an approved origin"), false);
+            //return callback(new Error("Not an approved origin"), false);
         }
 
         try {
             new URL(origin);
         } catch (error) {
             console.warn(`🚨 Malformed Origin: ${origin}`);
-            return callback(new Error("Malformed Origin"), false);
+            //return callback(new Error("Malformed Origin"), false);
         }
 
         return callback(null, true);
@@ -173,23 +184,28 @@ app.get("/dff/v1/data", authenticateToken, (req, res) => {
 
 
 // ✅ Secure Data Update Route (Protected)
-app.put("/dff/v1/update/:id", authenticateToken, (req, res) => {
+
+app.put("/dff/v1/update/:id", authenticateToken, async (req, res) => {
+    data = await utilities.getAccessToken();
+    const accessToken = JSON.parse(data).access;
+    const LOCALLINE_API_URL = "https://localline.ca/api/backoffice/v2/products/";
+
     const { id } = req.params;
     const { visible, track_inventory, stock_inventory } = req.body;
     const timestamp = new Date().toISOString();
 
     // Fetch productName and packageName before updating
-    db.query("SELECT productName, packageName FROM pricelist WHERE id = ?", [id], (err, results) => {
+    db.query("SELECT productName, packageName, localLineProductID FROM pricelist WHERE id = ?", [id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         if (results.length === 0) return res.status(404).json({ error: "Product not found" });
 
-        const { productName, packageName } = results[0];
+        const { productName, packageName, localLineProductID } = results[0]; // Assume you have a `localline_id` column
 
         // Perform the update
         db.query(
             "UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=? WHERE id=?",
             [visible, track_inventory, stock_inventory, id],
-            (err) => {
+            async (err) => {
                 if (err) return res.status(500).json({ error: err.message });
 
                 // Append change to CSV file
@@ -204,12 +220,39 @@ app.put("/dff/v1/update/:id", authenticateToken, (req, res) => {
                 // Append data to the CSV file
                 fs.appendFileSync(logFilePath, logEntry, "utf8");
 
+                // 🔹 Call LocalLine API after database update
+                if (localLineProductID) {
+                    try {
+
+                        let payload = {
+                            visible: Boolean(visible), 
+                            track_inventory: Boolean(track_inventory)
+                        };
+
+                        if (track_inventory === true && Number(stock_inventory) > 0) {
+                            payload.set_inventory = Number(stock_inventory); 
+                        }
+
+                        if (Object.keys(payload).length > 0) {
+                            await axios.patch(`${LOCALLINE_API_URL}${localLineProductID}/`, payload, {
+                                headers: {
+                                    "Authorization": `Bearer ${accessToken}`,
+                                    "Content-Type": "application/json"
+                                }
+                            });
+
+                            console.log(`✅ LocalLine product ${localLineProductID} updated:`, payload);
+                        }
+                    } catch (error) {
+                        console.error(`❌ LocalLine API update failed for ${localLineProductID}:`, error.response?.data || error.message);
+                    }
+                }
+
                 res.json({ message: "Updated successfully" });
             }
         );
     });
 });
-
 // ✅ Global Error Handler
 app.use((err, req, res, next) => {
     if (err instanceof URIError) {
