@@ -30,6 +30,8 @@ if (fs.existsSync("/home/exouser/code/dff/scripts/.env")) {
 }
 
 const app = express();
+// ✅ Enable trusting reverse proxies (e.g., Nginx, Cloudflare)
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(helmet()); // ✅ Adds security headers to protect against various attacks
 app.use(limiter); // Apply rate limiting globally
