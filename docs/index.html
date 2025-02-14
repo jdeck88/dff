@@ -97,7 +97,11 @@
     </form>
 
     <h2>Deck Family Farm Product Inventory</h2>
-
+    <label for="categoryFilter">Filter by Category: </label>
+    <select id="categoryFilter" onchange="filterCategory()">
+        <option value="all">All Categories</option>
+    </select>
+    
     <table>
         <thead>
             <tr>
@@ -163,9 +167,12 @@ async function loadData() {
         editedRows.clear();
         document.getElementById("applyChanges").disabled = true;
 
+        // Extract unique categories
+        let categories = new Set();
         data.forEach(row => {
+            categories.add(row.category);
             tableBody.innerHTML += `
-                <tr data-id="${row.id}">
+                <tr data-id="${row.id}" data-category="${row.category}">
                     <td>${row.category}</td>
                     <td>${row.productName}</td>
                     <td>${row.packageName}</td>
@@ -176,9 +183,71 @@ async function loadData() {
                     <td></td>
                 </tr>`;
         });
+
+        // Populate the category filter dropdown
+        let categoryFilter = document.getElementById("categoryFilter");
+        categoryFilter.innerHTML = `<option value="all">All Categories</option>`;
+        categories.forEach(category => {
+            categoryFilter.innerHTML += `<option value="${category}">${category}</option>`;
+        });
+
+        // Apply sorting functionality after data loads
+        applySorting();
     } catch (error) {
         alert("Session expired. Please log in again.");
     }
+}
+
+function filterCategory() {
+    let selectedCategory = document.getElementById("categoryFilter").value;
+    let rows = document.querySelectorAll("#tableBody tr");
+
+    rows.forEach(row => {
+        let rowCategory = row.getAttribute("data-category");
+        if (selectedCategory === "all" || rowCategory === selectedCategory) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+}
+
+// Sorting Functionality (Re-applied after data loads)
+function applySorting() {
+    $("th").not(":last-child").off("click").each(function (index) {
+        $(this).css("cursor", "pointer").on("click", function () {
+            let table = $(this).closest("table");
+            let rows = table.find("tbody tr").toArray();
+            let ascending = $(this).hasClass("asc");
+
+            // Remove sort indicators from all headers
+            $("th").removeClass("asc desc");
+
+            // Toggle sorting order
+            $(this).toggleClass("asc", !ascending);
+            $(this).toggleClass("desc", ascending);
+
+            // Sort function
+            rows.sort((rowA, rowB) => {
+                let cellA = $(rowA).children("td").eq(index).text().trim();
+                let cellB = $(rowB).children("td").eq(index).text().trim();
+
+                // Convert to numbers if possible
+                let numA = parseFloat(cellA);
+                let numB = parseFloat(cellB);
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return ascending ? numB - numA : numA - numB;
+                }
+
+                return ascending ? cellB.localeCompare(cellA) : cellA.localeCompare(cellB);
+            });
+
+            // Reorder the table rows
+            $.each(rows, function (_, row) {
+                table.children("tbody").append(row);
+            });
+        });
+    });
 }
 
 function toggleSwitch(element) {
@@ -246,6 +315,8 @@ window.onload = function() {
         loadData();
     }
 };
+
+
 </script>
 
 </body>
