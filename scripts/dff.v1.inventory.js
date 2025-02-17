@@ -42,35 +42,6 @@ const allowedOrigins = [
     "https://jdeck88.github.io"
 ];
 
-// ✅ Enhanced CORS Handling
-app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin) {
-            console.warn(`🚨 No origin: ${origin}`);
-            //return callback(new Error("Bad Request: No origin"), false);
-        }
-        if (!allowedOrigins.includes(origin)) {
-            console.warn(`🚨 Not in approved list of origins: ${origin}`);
-            //return callback(new Error("Not an approved origin"), false);
-        }
-
-        try {
-            new URL(origin);
-        } catch (error) {
-            console.warn(`🚨 Malformed Origin: ${origin}`);
-            //return callback(new Error("Malformed Origin"), false);
-        }
-
-        return callback(null, true);
-    },
-    credentials: true,
-    methods: "GET,POST,PUT,DELETE,OPTIONS",
-    allowedHeaders: "Content-Type,Authorization"
-}));
-
-// ✅ Handle Preflight (OPTIONS) Requests
-app.options("*", cors());
-
 // ✅ Strict Request Filtering - Only allow known API paths
 const validRoutes = [
     "/dff/v1/register",
@@ -86,6 +57,36 @@ app.use((req, res, next) => {
     }
     next();
 });
+
+// ✅ Enhanced CORS Handling
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin) {
+            console.warn(`🚨 No origin: ${origin}`);
+            return callback(new Error("Bad Request: No origin"), false);
+        }
+        if (!allowedOrigins.includes(origin)) {
+            console.warn(`🚨 Not in approved list of origins: ${origin}`);
+            return callback(new Error("Not an approved origin"), false);
+        }
+
+        try {
+            new URL(origin);
+        } catch (error) {
+            console.warn(`🚨 Malformed Origin: ${origin}`);
+            return callback(new Error("Malformed Origin"), false);
+        }
+
+        return callback(null, true);
+    },
+    credentials: true,
+    methods: "GET,POST,PUT,DELETE,OPTIONS",
+    allowedHeaders: "Content-Type,Authorization"
+}));
+
+// ✅ Handle Preflight (OPTIONS) Requests
+app.options("*", cors());
+
 
 // ✅ Malformed URL Handling - Prevents crashes
 app.use((req, res, next) => {
