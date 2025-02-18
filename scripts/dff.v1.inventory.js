@@ -10,6 +10,7 @@ const path = require("path");
 const axios = require("axios");
 const utilities = require('./utilities');
 const rateLimit = require("express-rate-limit");
+const fastCsv = require("fast-csv");
 
 const limiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
@@ -186,98 +187,128 @@ app.get("/dff/v1/data", authenticateToken, (req, res) => {
 });
 
 
+
 // ✅ Secure Data Update Route (Protected)
 app.put("/dff/v1/update/:id", authenticateToken, async (req, res) => {
-    data = await utilities.getAccessToken();
-    const accessToken = JSON.parse(data).access;
-    const LOCALLINE_API_URL = "https://localline.ca/api/backoffice/v2/products/";
+    try {
+        // Retrieve Access Token
+        const data = await utilities.getAccessToken();
+        const accessToken = JSON.parse(data).access;
+        const LOCALLINE_API_URL = "https://localline.ca/api/backoffice/v2/products/";
 
-    const { id } = req.params;
-    const { visible, track_inventory, stock_inventory } = req.body;
-    const timestamp = new Date().toISOString();
+        const { id } = req.params;
+        const { visible, track_inventory, stock_inventory } = req.body;
+        const timestamp = new Date().toISOString();
 
-    db.query("SELECT productName, packageName, localLineProductID FROM pricelist WHERE id = ?", [id], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (results.length === 0) return res.status(404).json({ error: "Product not found" });
+        db.query("SELECT productName, packageName, localLineProductID FROM pricelist WHERE id = ?", [id], (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (results.length === 0) return res.status(404).json({ error: "Product not found" });
 
-        const { productName, packageName, localLineProductID } = results[0];
+            const { productName, packageName, localLineProductID } = results[0];
 
-        // ✅ Structured response object
-        let updateStatus = {
-            id: id,
-            productName: productName,
-            databaseUpdate: false,
-            localLineUpdate: false,
-        };
+            // ✅ Structured response object
+            let updateStatus = {
+                id,
+                productName,
+                databaseUpdate: false,
+                localLineUpdate: false,
+            };
 
-        // Perform the database update
-        db.query(
-            "UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=? WHERE id=?",
-            [visible, track_inventory, stock_inventory, id],
-            async (err) => {
-                if (err) return res.status(500).json({ error: err.message });
+            // ✅ Perform the database update
+            db.query(
+                "UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=? WHERE id=?",
+                [visible, track_inventory, stock_inventory, id],
+                async (err) => {
+                    if (err) return res.status(500).json({ error: err.message });
 
-                updateStatus.databaseUpdate = true; // ✅ Mark DB update as successful
+                    updateStatus.databaseUpdate = true; // ✅ Mark DB update as successful
 
-                // Append change to CSV file
-                const logFilePath = path.join(__dirname, "../docs/inventory_updates_log.csv");
-                const logEntry = `${id},${productName},${packageName},${visible},${track_inventory},${stock_inventory},${timestamp}\n`;
+                    // ✅ Append change to CSV file using `fast-csv`
+                    const logFilePath = path.join(__dirname, "../docs/inventory_updates_log.csv");
 
-                if (!fs.existsSync(logFilePath)) {
-                    fs.writeFileSync(logFilePath, "id,productName,packageName,visible,track_inventory,stock_inventory,timestamp\n");
-                }
-                fs.appendFileSync(logFilePath, logEntry, "utf8");
+                    // Ensure file exists with headers
+                    if (!fs.existsSync(logFilePath)) {
+                        fs.writeFileSync(
+                            logFilePath,
+                            "id,productName,packageName,visible,track_inventory,stock_inventory,timestamp\n",
+                            "utf8"
+                        );
+                    }
 
-                // ✅ Attempt LocalLine API update
-                if (localLineProductID) {
-                    try {
-                        let payload = {
-                            visible: Boolean(visible),
-                            track_inventory: Boolean(track_inventory)
-                        };
+                    // Log entry object
+                    const logEntry = {
+                        id,
+                        productName,
+                        packageName,
+                        visible,
+                        track_inventory,
+                        stock_inventory,
+                        timestamp,
+                    };
 
-                        if (track_inventory === true && Number(stock_inventory) > 0) {
-                            payload.set_inventory = Number(stock_inventory);
-                        }
+                    // Append data to CSV file properly quoted
+                    const csvStream = fastCsv.format({ headers: false, quote: true });
+                    const writableStream = fs.createWriteStream(logFilePath, { flags: "a" });
 
-                        if (Object.keys(payload).length > 0) {
-                            await axios.patch(`${LOCALLINE_API_URL}${localLineProductID}/`, payload, {
-                                headers: {
-                                    "Authorization": `Bearer ${accessToken}`,
-                                    "Content-Type": "application/json"
-                                }
+                    csvStream.pipe(writableStream);
+                    csvStream.write(Object.values(logEntry));
+                    csvStream.end();
+
+                    // ✅ Attempt LocalLine API update
+                    if (localLineProductID) {
+                        try {
+let payload = {
+    visible: visible, // Keeps `0` values
+    track_inventory: track_inventory // Keeps `0` values
+};
+
+// Ensure `set_inventory` is included even if `stock_inventory` is 0
+if (track_inventory === true || stock_inventory === 0) {
+    payload.set_inventory = Number(stock_inventory);
+}
+
+                            if (Object.keys(payload).length > 0) {
+                                await axios.patch(`${LOCALLINE_API_URL}${localLineProductID}/`, payload, {
+                                    headers: {
+                                        "Authorization": `Bearer ${accessToken}`,
+                                        "Content-Type": "application/json"
+                                    }
+                                });
+
+                                console.log(`✅ LocalLine product ${localLineProductID} updated:`, payload);
+                                updateStatus.localLineUpdate = true;
+                            }
+                        } catch (error) {
+                            utilities.sendEmail({
+                                from: "jdeck88@gmail.com",
+                                to: "jdeck88@gmail.com",
+                                subject: "LocalLine API update failed",
+                                text: `API update failed for ${localLineProductID}`
                             });
 
-                            console.log(`✅ LocalLine product ${localLineProductID} updated:`, payload);
-                            updateStatus.localLineUpdate = true;
+                            console.error(`❌ LocalLine API update failed for ${localLineProductID}:`, error.response?.data || error.message);
+                            updateStatus.localLineUpdate = false;
                         }
-                    } catch (error) {
+                    } else {
                         utilities.sendEmail({
                             from: "jdeck88@gmail.com",
                             to: "jdeck88@gmail.com",
                             subject: "LocalLine API update failed",
-                            text: `API update failed for ${localLineProductID}`
+                            text: `We do not have a record of this product in LocalLine: ${localLineProductID}`
                         });
 
-                        console.error(`❌ LocalLine API update failed for ${localLineProductID}:`, error.response?.data || error.message);
+                        console.error(`❌ No record found in LocalLine for ${localLineProductID}`);
                         updateStatus.localLineUpdate = false;
                     }
-                } else {
-                    utilities.sendEmail({
-                        from: "jdeck88@gmail.com",
-                        to: "jdeck88@gmail.com",
-                        subject: "LocalLine API update failed",
-                        text: `We do not have a record of this product in LocalLine: ${localLineProductID}`
-                    });
 
-                    console.error(`❌ No record found in LocalLine for ${localLineProductID}`);
-                    updateStatus.localLineUpdate = false;
+                    res.json(updateStatus);
                 }
-
-                res.json(updateStatus);
-            }
-        );
-    });
+            );
+        });
+    } catch (error) {
+        console.error("❌ Error in update route:", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
 
 // ✅ Global Error Handler
