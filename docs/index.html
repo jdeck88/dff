@@ -258,6 +258,25 @@ function toggleSwitch(element) {
 function markEdited(element) {
     let row = element.closest("tr");
     let id = row.getAttribute("data-id");
+
+    // Get values from row
+    let visible = row.querySelectorAll(".toggle-switch")[0].classList.contains("active");
+    let track_inventory = row.querySelectorAll(".toggle-switch")[1].classList.contains("active");
+    let stock_inventory = parseInt(row.querySelector(".stock-input").value) || 0;
+
+    // ✅ Condition Check
+    if (track_inventory && visible && stock_inventory === 0) {
+        alert("⚠️ If there are 0 items and 'Track Inventory' is ON, you must set 'Visible' to OFF.");
+        // **Immediately revert the change**
+        if (element.classList.contains("toggle-switch")) {
+            element.classList.toggle("active"); // Toggle switch back
+        } else {
+            element.value = "1"; // Reset stock_inventory input to 1
+        }
+        return;
+    }
+
+    // ✅ Mark row as edited
     editedRows.add(id);
     row.classList.add("edited");
     document.getElementById("applyChanges").disabled = false;
