@@ -200,8 +200,8 @@ async function loadData() {
             categories.add(row.category);
             tableBody.innerHTML += `
     <tr data-id="${row.id}" data-category="${row.category}">
-        <td>${row.category}</td>
-        <td><input type="text" class="editable-input" value="${row.productName}" oninput="markEdited(this)"></td>
+        <td>${row.category}</td>        
+        <td>${row.productName}</td>
         <td>${row.packageName}</td>
         <td><textarea class="editable-textarea" oninput="markEdited(this); autoResize(this)">${row.description || ''}</textarea></td>      
         <td><div class="toggle-switch ${row.visible ? 'active' : ''}" onclick="toggleSwitch(this)"></div></td>
@@ -293,7 +293,7 @@ function markEdited(element) {
     let id = row.getAttribute("data-id");
 
     // Get values from row
-    let productName = row.querySelector(".editable-input"); // Select product name input
+    //let productName = row.querySelector(".editable-input"); // Select product name input
     let description = row.querySelector(".editable-textarea"); // Select description textarea
 
     let visible = row.querySelectorAll(".toggle-switch")[0].classList.contains("active");
@@ -330,11 +330,11 @@ async function applyChanges() {
     let updates = [];
     editedRows.forEach(id => {
         let row = document.querySelector(`tr[data-id="${id}"]`);
-        let productNameField = row.querySelector(".editable-input");
+        //let productNameField = row.querySelector(".editable-input");
         let descriptionField = row.querySelector(".editable-textarea");
 
         let data = {
-            productName: productNameField ? productNameField.value : "",
+            //productName: productNameField ? productNameField.value : "",
             description: descriptionField ? descriptionField.value : "",
             visible: row.querySelectorAll(".toggle-switch")[0].classList.contains("active"),
             track_inventory: row.querySelectorAll(".toggle-switch")[1].classList.contains("active"),
