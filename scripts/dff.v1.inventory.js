@@ -107,20 +107,45 @@ app.use((req, res, next) => {
 });
 
 // ✅ Secure Database Connection
-const db = mysql.createConnection({
+const db = mysql.createPool({
     host: process.env.DFF_DB_HOST,
     port: process.env.DFF_DB_PORT,
     user: process.env.DFF_DB_USER,
     password: process.env.DFF_DB_PASSWORD,
     database: process.env.DFF_DB_DATABASE,
+    waitForConnections: true,
+    connectionLimit: 10, // Adjust as needed
+    queueLimit: 0
 });
 
-db.connect((err) => {
+setInterval(() => {
+    db.query('SELECT 1', (err) => {
+        if (err) console.error("❌ Connection issue:", err);
+    });
+}, 30000); // Runs every 30s to keep the connection alive
+
+db.getConnection((err, connection) => {
     if (err) {
         console.error("❌ Database connection error:", err);
-        process.exit(1);
+    } else {
+        console.log("✅ Connected to database");
+        connection.release();
     }
-    console.log("✅ Connected to database");
+});
+
+db.on('error', (err) => {
+    console.error("🚨 MySQL Error:", err);
+    if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+        console.log("🔄 Reconnecting...");
+        db.getConnection((err, connection) => {
+            if (err) {
+                console.error("❌ Reconnection failed:", err);
+            } else {
+                console.log("✅ Reconnected!");
+                connection.release();
+            }
+        });
+    }
 });
 
 // ✅ User Registration
@@ -146,8 +171,8 @@ app.post("/dff/v1/register", async (req, res) => {
 // ✅ User Login with JWT
 app.post("/dff/v1/login", (req, res) => {
     const { username, password } = req.body;
-
-    db.query("SELECT * FROM users WHERE username = ?", [username], async (err, results) => {
+  /*
+  db.query("SELECT * FROM users WHERE username = ?", [username], async (err, results) => {
         if (err || results.length === 0) return res.status(400).json({ error: "User not found" });
 
         const validPassword = await bcrypt.compare(password, results[0].password);
@@ -157,6 +182,32 @@ app.post("/dff/v1/login", (req, res) => {
 
         res.json({ message: "Login successful", token });
     });
+  */
+db.query("SELECT * FROM users WHERE username = ?", [username], async (err, results) => {
+    if (err) {
+        console.error("Database error:", err); // Log the full error internally
+        return res.status(500).json({ error: "Database error", details: err.message }); // Send a safe error message to the client
+    }
+
+    if (results.length === 0) {
+        return res.status(404).json({ error: "User does not exist" });
+    }
+
+    try {
+        const validPassword = await bcrypt.compare(password, results[0].password);
+        if (!validPassword) {
+            return res.status(401).json({ error: "Invalid password" });
+        }
+
+        const token = jwt.sign({ userId: results[0].id }, process.env.JWT_SECRET, { expiresIn: "90d" });
+
+        res.json({ message: "Login successful", token });
+    } catch (bcryptError) {
+        console.error("Password comparison error:", bcryptError);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 });
 
 // ✅ Middleware: Authenticate JWT Token
@@ -187,43 +238,43 @@ app.get("/dff/v1/data", authenticateToken, (req, res) => {
 });
 
 
-
 // ✅ Secure Data Update Route (Protected)
 app.put("/dff/v1/update/:id", authenticateToken, async (req, res) => {
     try {
         // Retrieve Access Token
-        const data = await utilities.getAccessToken();
-        const accessToken = JSON.parse(data).access;
+        const tokenData = await utilities.getAccessToken();
+        const accessToken = JSON.parse(tokenData).access;
         const LOCALLINE_API_URL = "https://localline.ca/api/backoffice/v2/products/";
 
         const { id } = req.params;
-        const { visible, track_inventory, stock_inventory } = req.body;
+        const { visible, track_inventory, stock_inventory, productName, description } = req.body;
         const timestamp = new Date().toISOString();
 
-        db.query("SELECT productName, packageName, localLineProductID FROM pricelist WHERE id = ?", [id], (err, results) => {
+        // Query product details
+        db.query("SELECT productName as origProductName, origPackageName, localLineProductID FROM pricelist WHERE id = ?", [id], (err, results) => {
             if (err) return res.status(500).json({ error: err.message });
             if (results.length === 0) return res.status(404).json({ error: "Product not found" });
 
-            const { productName, packageName, localLineProductID } = results[0];
+            const { origProductName, origPackageName, localLineProductID } = results[0];
 
             // ✅ Structured response object
             let updateStatus = {
                 id,
-                productName,
+                origProductName,
                 databaseUpdate: false,
                 localLineUpdate: false,
             };
 
             // ✅ Perform the database update
             db.query(
-                "UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=? WHERE id=?",
-                [visible, track_inventory, stock_inventory, id],
+                "UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=?, productName=?, description=?  WHERE id=?",
+                [visible, track_inventory, stock_inventory, productName, description, id],
                 async (err) => {
                     if (err) return res.status(500).json({ error: err.message });
 
                     updateStatus.databaseUpdate = true; // ✅ Mark DB update as successful
 
-                    // ✅ Append change to CSV file using `fast-csv`
+                    // ✅ Append change to CSV file
                     const logFilePath = path.join(__dirname, "../docs/inventory_updates_log.csv");
 
                     // Ensure file exists with headers
@@ -235,37 +286,49 @@ app.put("/dff/v1/update/:id", authenticateToken, async (req, res) => {
                         );
                     }
 
-                    // Log entry object
-                    const logEntry = {
+                    // ✅ Prepare log entry
+                    const logEntry = [
                         id,
-                        productName,
-                        packageName,
+                        origProductName,
+                        origPackageName,
                         visible,
                         track_inventory,
                         stock_inventory,
                         timestamp,
-                    };
+                    ];
 
-                    // Append data to CSV file properly quoted
-                    const csvStream = fastCsv.format({ headers: false, quote: true });
-                    const writableStream = fs.createWriteStream(logFilePath, { flags: "a" });
+                    // ✅ Open the writable stream in append mode
+                    const writableStream = fs.createWriteStream(logFilePath, { flags: "a", encoding: "utf8" });
 
-                    csvStream.pipe(writableStream);
-                    csvStream.write(Object.values(logEntry));
-                    csvStream.end();
+                    // ✅ Append row manually with a newline
+                    fastCsv
+                        .writeToStream(writableStream, [logEntry], { headers: false, quote: true })
+                        .on("finish", () => {
+                            fs.appendFileSync(logFilePath, "\n"); // ✅ Manually force a new line
+                            console.log("✅ Data appended to CSV successfully.");
+                        })
+                        .on("error", (err) => console.error("❌ Error writing to CSV file:", err));
 
                     // ✅ Attempt LocalLine API update
                     if (localLineProductID) {
                         try {
-let payload = {
-    visible: visible, // Keeps `0` values
-    track_inventory: track_inventory // Keeps `0` values
-};
+                            let payload = {
+                                visible: visible, // Keeps `0` values
+                                track_inventory: track_inventory // Keeps `0` values
+                            };
 
-// Ensure `set_inventory` is included even if `stock_inventory` is 0
-if (track_inventory === true || stock_inventory === 0) {
-    payload.set_inventory = Number(stock_inventory);
-}
+                            if (description !== undefined) {
+                                payload.description = description
+                            }
+
+                            if (productName !== undefined) {
+                                payload.name = productName
+                            }
+                          
+                            // Ensure `set_inventory` is included even if `stock_inventory` is 0
+                            if (track_inventory === true || stock_inventory === 0) {
+                                payload.set_inventory = Number(stock_inventory);
+                            }
 
                             if (Object.keys(payload).length > 0) {
                                 await axios.patch(`${LOCALLINE_API_URL}${localLineProductID}/`, payload, {
@@ -310,6 +373,10 @@ if (track_inventory === true || stock_inventory === 0) {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+
+
+
 
 // ✅ Global Error Handler
 app.use((err, req, res, next) => {
