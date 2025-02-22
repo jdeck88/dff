@@ -11,15 +11,18 @@
             margin: 20px;
         }
         table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Ensures columns respect their widths */
+}
+th, td {
+    padding: 8px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+        th:nth-child(4), td:nth-child(4) { /* 4th column is Description */
+    width: 30%; /* Makes Description wider */
+}
         th {
             background-color: #f4f4f4;
             position: sticky;
@@ -95,9 +98,10 @@
 }
 
 .editable-textarea {
+    width: 100%;
     min-height: 40px;
     max-height: 150px;
-    overflow-y: auto;
+    resize: none;
     line-height: 1.5;
 }
 
@@ -132,7 +136,6 @@
                 <th>Product Name</th>
                 <th>Package Name</th>
                 <th>Description</th>
-                <th>LL productID</th>
                 <th>Visible</th>
                 <th>Track Inventory</th>
                 <th>Stock Inventory</th>
@@ -200,7 +203,7 @@ async function loadData() {
         <td>${row.category}</td>
         <td><input type="text" class="editable-input" value="${row.productName}" oninput="markEdited(this)"></td>
         <td>${row.packageName}</td>
-        <td><textarea class="editable-textarea" oninput="markEdited(this); autoResize(this)">${row.description || ''}</textarea></td>        <td>${row.localLineProductID}</td>
+        <td><textarea class="editable-textarea" oninput="markEdited(this); autoResize(this)">${row.description || ''}</textarea></td>      
         <td><div class="toggle-switch ${row.visible ? 'active' : ''}" onclick="toggleSwitch(this)"></div></td>
         <td><div class="toggle-switch ${row.track_inventory ? 'active' : ''}" onclick="toggleSwitch(this)"></div></td>
         <td><input type="number" class="stock-input" value="${row.stock_inventory}" oninput="markEdited(this)"></td>
