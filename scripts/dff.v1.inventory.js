@@ -228,7 +228,7 @@ function authenticateToken(req, res, next) {
 // ✅ Secure Inventory Data Route (Protected)
 app.get("/dff/v1/data", authenticateToken, (req, res) => {
     const sqlQuery = `
-        SELECT id, category, productName, packageName, localLineProductID, visible, track_inventory, stock_inventory
+        SELECT id, category, productName, packageName, description, localLineProductID, visible, track_inventory, stock_inventory
         FROM pricelist ORDER BY category, productName WHERE available_on_ll is true`;
 
     db.query(sqlQuery, (err, results) => {
