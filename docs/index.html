@@ -85,6 +85,29 @@
             background-color: #ccc;
             cursor: not-allowed;
         }
+        .editable-input, .editable-textarea {
+    width: 100%;
+    border: 1px solid #ddd;
+    background: #fff;
+    padding: 5px;
+    font-size: 14px;
+    resize: none;
+}
+
+.editable-textarea {
+    min-height: 40px;
+    max-height: 150px;
+    overflow-y: auto;
+    line-height: 1.5;
+}
+
+
+.editable-input:focus {
+    background: #f9f9f9;
+    outline: none;
+    border-bottom: 2px solid #4CAF50;
+}
+
     </style>
 </head>
 <body>
@@ -108,7 +131,8 @@
                 <th>Category</th>
                 <th>Product Name</th>
                 <th>Package Name</th>
-                <th>Available On LL</th>
+                <th>Description</th>
+                <th>LL productID</th>
                 <th>Visible</th>
                 <th>Track Inventory</th>
                 <th>Stock Inventory</th>
@@ -172,16 +196,17 @@ async function loadData() {
         data.forEach(row => {
             categories.add(row.category);
             tableBody.innerHTML += `
-                <tr data-id="${row.id}" data-category="${row.category}">
-                    <td>${row.category}</td>
-                    <td>${row.productName}</td>
-                    <td>${row.packageName}</td>
-                    <td>${row.available_on_ll ? 'True' : 'False'}</td>
-                    <td><div class="toggle-switch ${row.visible ? 'active' : ''}" onclick="toggleSwitch(this)"></div></td>
-                    <td><div class="toggle-switch ${row.track_inventory ? 'active' : ''}" onclick="toggleSwitch(this)"></div></td>
-                    <td><input type="number" class="stock-input" value="${row.stock_inventory}" oninput="markEdited(this)"></td>
-                    <td></td>
-                </tr>`;
+    <tr data-id="${row.id}" data-category="${row.category}">
+        <td>${row.category}</td>
+        <td><input type="text" class="editable-input" value="${row.productName}" oninput="markEdited(this)"></td>
+        <td>${row.packageName}</td>
+        <td><textarea class="editable-textarea" oninput="markEdited(this); autoResize(this)">${row.description || ''}</textarea></td>        <td>${row.localLineProductID}</td>
+        <td><div class="toggle-switch ${row.visible ? 'active' : ''}" onclick="toggleSwitch(this)"></div></td>
+        <td><div class="toggle-switch ${row.track_inventory ? 'active' : ''}" onclick="toggleSwitch(this)"></div></td>
+        <td><input type="number" class="stock-input" value="${row.stock_inventory}" oninput="markEdited(this)"></td>
+        <td></td>
+    </tr>`;
+
         });
 
         // Populate the category filter dropdown
@@ -196,6 +221,11 @@ async function loadData() {
     } catch (error) {
         alert("Session expired. Please log in again.");
     }
+}
+
+function autoResize(textarea) {
+    textarea.style.height = "auto"; // Reset height to recalculate
+    textarea.style.height = (textarea.scrollHeight) + "px"; // Set new height
 }
 
 function filterCategory() {
@@ -260,6 +290,8 @@ function markEdited(element) {
     let id = row.getAttribute("data-id");
 
     // Get values from row
+    let productName = row.querySelector(".editable-input:nth-child(1)").value;
+    let description = row.querySelector(".editable-input:nth-child(2)").value;
     let visible = row.querySelectorAll(".toggle-switch")[0].classList.contains("active");
     let track_inventory = row.querySelectorAll(".toggle-switch")[1].classList.contains("active");
     let stock_inventory = parseInt(row.querySelector(".stock-input").value) || 0;
@@ -295,6 +327,8 @@ async function applyChanges() {
     editedRows.forEach(id => {
         let row = document.querySelector(`tr[data-id="${id}"]`);
         let data = {
+            productName: row.querySelector(".editable-input:nth-child(1)").value,
+            description: row.querySelector(".editable-input:nth-child(2)").value,
             visible: row.querySelectorAll(".toggle-switch")[0].classList.contains("active"),
             track_inventory: row.querySelectorAll(".toggle-switch")[1].classList.contains("active"),
             stock_inventory: row.querySelector(".stock-input").value
