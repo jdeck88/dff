@@ -251,7 +251,7 @@ app.put("/dff/v1/update/:id", authenticateToken, async (req, res) => {
         const timestamp = new Date().toISOString();
 
         // Query product details
-        db.query("SELECT productName as origProductName, origPackageName, localLineProductID FROM pricelist WHERE id = ?", [id], (err, results) => {
+        db.query("SELECT productName as origProductName, packageName as origPackageName, localLineProductID FROM pricelist WHERE id = ?", [id], (err, results) => {
             if (err) return res.status(500).json({ error: err.message });
             if (results.length === 0) return res.status(404).json({ error: "Product not found" });
 
