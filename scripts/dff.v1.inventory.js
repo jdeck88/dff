@@ -229,7 +229,7 @@ function authenticateToken(req, res, next) {
 app.get("/dff/v1/data", authenticateToken, (req, res) => {
     const sqlQuery = `
         SELECT id, category, productName, packageName, description, localLineProductID, visible, track_inventory, stock_inventory
-        FROM pricelist ORDER BY category, productName WHERE available_on_ll is true`;
+        FROM pricelist WHERE available_on_ll is true ORDER BY category, productName`;
 
     db.query(sqlQuery, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
