@@ -293,8 +293,9 @@ function markEdited(element) {
     let id = row.getAttribute("data-id");
 
     // Get values from row
-    let productName = row.querySelector(".editable-input:nth-child(1)").value;
-    let description = row.querySelector(".editable-input:nth-child(2)").value;
+    let productNameField = row.querySelector(".editable-input"); // Select product name input
+    let descriptionField = row.querySelector(".editable-textarea"); // Select description textarea
+
     let visible = row.querySelectorAll(".toggle-switch")[0].classList.contains("active");
     let track_inventory = row.querySelectorAll(".toggle-switch")[1].classList.contains("active");
     let stock_inventory = parseInt(row.querySelector(".stock-input").value) || 0;
