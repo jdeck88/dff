@@ -330,9 +330,12 @@ async function applyChanges() {
     let updates = [];
     editedRows.forEach(id => {
         let row = document.querySelector(`tr[data-id="${id}"]`);
+        let productNameField = row.querySelector(".editable-input");
+        let descriptionField = row.querySelector(".editable-textarea");
+
         let data = {
-            productName: row.querySelector(".editable-input:nth-child(1)").value,
-            description: row.querySelector(".editable-input:nth-child(2)").value,
+            productName: productNameField ? productNameField.value : "",
+            description: descriptionField ? descriptionField.value : "",
             visible: row.querySelectorAll(".toggle-switch")[0].classList.contains("active"),
             track_inventory: row.querySelectorAll(".toggle-switch")[1].classList.contains("active"),
             stock_inventory: row.querySelector(".stock-input").value
