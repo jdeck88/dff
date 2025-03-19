@@ -21,6 +21,9 @@ async function exportPricelistToExcel() {
             .filter(col => col.Type.includes("tinyint(1)")) // Identify boolean columns
             .map(col => col.Field);
 
+        // ✅ Add computed column names
+        columnNames.push('ffcsaPurchasePrice', 'ffcsaMemberSalesPrice', 'ffcsaGuestSalesPrice');
+
         // ✅ Create a new workbook and worksheet
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Pricelist');
@@ -33,12 +36,30 @@ async function exportPricelistToExcel() {
 
         // ✅ Insert data into the worksheet
         rows.forEach(row => {
+            let ffcsaPurchasePrice = 0;
+            
+            if (row.dff_unit_of_measure === 'lbs') {
+                const avgWeight = (row.highest_weight + row.lowest_weight) / 2;
+                ffcsaPurchasePrice = avgWeight * row.retailSalesPrice * 0.725;
+            } else if (row.dff_unit_of_measure === 'each') {
+                ffcsaPurchasePrice = row.retailSalesPrice * 0.725;
+            }
+
+            // ✅ Compute marked-up prices
+            const ffcsaMemberSalesPrice = ffcsaPurchasePrice * 1.38;
+            const ffcsaGuestSalesPrice = ffcsaPurchasePrice * 1.55;
+
+            // ✅ Prepare row data
             const rowData = columnNames.map(column => {
+                if (column === 'ffcsaPurchasePrice') return ffcsaPurchasePrice.toFixed(2);
+                if (column === 'ffcsaMemberSalesPrice') return ffcsaMemberSalesPrice.toFixed(2);
+                if (column === 'ffcsaGuestSalesPrice') return ffcsaGuestSalesPrice.toFixed(2);
                 if (booleanColumns.includes(column)) {
                     return row[column] === 1 ? "True" : "False"; // ✅ Convert TINYINT(1) to True/False
                 }
                 return row[column]; // ✅ Keep other values as is
             });
+
             worksheet.addRow(rowData);
         });
 
@@ -54,3 +75,4 @@ async function exportPricelistToExcel() {
 }
 
 exportPricelistToExcel();
+
