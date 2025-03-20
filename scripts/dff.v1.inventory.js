@@ -257,21 +257,21 @@ app.put("/dff/v1/update/:id", authenticateToken, async (req, res) => {
 
             const { origProductName, origPackageName, localLineProductID } = results[0];
 
-            // ✅ Structured response object
-            let updateStatus = {
-                id,
-                origProductName,
-                databaseUpdate: false,
-                localLineUpdate: false,
-            };
 
             // ✅ Perform the database update
             db.query(
-                "UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=?, productName=?, description=?  WHERE id=?",
-                [visible, track_inventory, stock_inventory, productName, description, id],
+                "UPDATE pricelist SET visible=?, track_inventory=?, stock_inventory=?, description=?  WHERE id=?",
+                [visible, track_inventory, stock_inventory, description, id],
                 async (err) => {
                     if (err) return res.status(500).json({ error: err.message });
 
+            // ✅ Structured response object
+            let updateStatus = {
+                id,
+                productName,
+                databaseUpdate: false,
+                localLineUpdate: false,
+            };
                     updateStatus.databaseUpdate = true; // ✅ Mark DB update as successful
 
                     // ✅ Append change to CSV file
