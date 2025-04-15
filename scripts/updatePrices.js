@@ -5,7 +5,7 @@ const { Parser } = require("json2csv");
 require("dotenv").config();
 
 const PRICE_LIST_IDS = {
-    test1: 5332, // replace with actual ID
+    test1: 5332, 
     test2: 5333,
     guest: 4757
 };
@@ -129,7 +129,7 @@ async function updateProductWithPriceLists(productId, newBasePrice) {
 }
 
 async function run() {
-    await updateProductWithPriceLists(935696, 10); // Add more calls if needed
+    await updateProductWithPriceLists(935696, 10); 
 
     if (MISSING_LINKS_LOG.length > 0) {
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
