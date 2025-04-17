@@ -237,3 +237,9 @@ id,productName,packageName,visible,track_inventory,stock_inventory,timestamp
 105,Stewing Hen,2 - 3 lbs,true,true,15,2025-04-10T22:07:12.239Z
 43,"Pet Food, Organ Blend",1.00 lbs,true,false,0,2025-04-10T23:27:20.718Z
 57,"Chicken Part, Wings",1.00 - 1.50 lbs,true,true,12,2025-04-10T23:30:54.805Z
+134,Bavette Steak,0.9 - 1.6 lbs,true,false,15,2025-04-13T22:19:14.025Z
+134,Bavette Steak,0.9 - 1.6 lbs,true,true,15,2025-04-13T22:19:18.688Z
+134,Bavette Steak,0.9 - 1.6 lbs,true,true,15,2025-04-13T22:19:19.608Z
+134,Bavette Steak,0.9 - 1.6 lbs,true,true,15,2025-04-15T17:09:12.456Z
+108,"Rendered Beef Tallow, 16 oz",16 oz,false,false,0,2025-04-16T22:17:01.035Z
+37,Unrendered Beef Tallow,2.00 - 3.70 lbs,true,false,0,2025-04-16T22:17:01.022Z
