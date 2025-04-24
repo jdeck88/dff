@@ -243,3 +243,17 @@ id,productName,packageName,visible,track_inventory,stock_inventory,timestamp
 134,Bavette Steak,0.9 - 1.6 lbs,true,true,15,2025-04-15T17:09:12.456Z
 108,"Rendered Beef Tallow, 16 oz",16 oz,false,false,0,2025-04-16T22:17:01.035Z
 37,Unrendered Beef Tallow,2.00 - 3.70 lbs,true,false,0,2025-04-16T22:17:01.022Z
+128,Chorizo Verde,4 links/ pack 14 oz pack,true,true,2,2025-04-17T20:39:18.920Z35,Top Sirloin Steak,1.30 - 1.60 lbs,true,true,8,2025-04-17T20:39:18.681Z108,"Rendered Beef Tallow, 16 oz",16 oz,true,false,0,2025-04-17T20:39:18.790Z9,Beef Marrow Bones,3.00 - 5.00 lbs,true,true,1,2025-04-17T20:39:18.634Z
+
+
+
+112,Farm Made Chorizo Sausage Links,4 links/ pack 14 oz pack,true,true,6,2025-04-17T20:39:19.012Z
+134,Bavette Steak,0.9 - 1.6 lbs,true,true,8,2025-04-17T20:39:19.044Z
+57,"Chicken Part, Wings",1.00 - 1.50 lbs,true,true,10,2025-04-17T20:39:20.141Z
+70,Lamb Kabob,0.90 - 1.10 lbs,true,true,2,2025-04-17T20:39:20.261Z
+32,Beef Tenderloin,0.40 - 0.70 lbs,false,false,0,2025-04-17T20:39:20.369Z
+76,Lamb Stew,0.90 - 1.10 lbs,true,true,4,2025-04-17T20:39:20.420Z
+105,Stewing Hen,2 - 3 lbs,false,false,0,2025-04-17T20:39:20.584Z
+12,"Brisket, Large","Large, 4.00 - 5.00 lbs",true,true,2,2025-04-17T20:39:20.863Z
+90,"Olympia Provisions, Dog Treats",5 oz,true,false,0,2025-04-17T20:44:52.814Z
+48,Pork Tenderloin,0.80 - 1.30 lbs,false,false,0,2025-04-17T20:44:52.852Z
