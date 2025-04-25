@@ -1,22 +1,12 @@
 require('dotenv').config();
-const pricingUtils = require('./utilities.pricing');
-const mysql = require('mysql2/promise');
+const utilities = require('./utilities.pricing');
 const ExcelJS = require('exceljs');
 
 async function exportPricelistToExcel() {
-  const connection = await mysql.createConnection({
-    host: process.env.DFF_DB_HOST,
-    user: process.env.DFF_DB_USER,
-    password: process.env.DFF_DB_PASSWORD,
-    database: process.env.DFF_DB_DATABASE,
-    port: process.env.DFF_DB_PORT
-  });
-
   try {
-    console.log('✅ Connected to database');
 
     // ✅ Get column names dynamically from `pricelist`
-    const [columns] = await connection.execute("SHOW COLUMNS FROM pricelist");
+    const [columns] = await utilities.db.execute("SHOW COLUMNS FROM pricelist");
     const originalColumnNames = columns.map(col => col.Field);
     const booleanColumns = columns
       .filter(col => col.Type.includes("tinyint(1)")) // Identify boolean columns
@@ -55,18 +45,18 @@ async function exportPricelistToExcel() {
     worksheet.addRow(orderedColumnNames);
 
     // ✅ Query all data from `pricelist`
-    const [rows] = await connection.execute('SELECT * FROM pricelist ORDER BY category, productName');
+    const [rows] = await utilities.db.execute('SELECT * FROM pricelist ORDER BY category, productName');
 
     // ✅ Insert data into the worksheet
     rows.forEach(row => {
-      const prices = pricingUtils.calculateFfcsaPrices(row);
+      const prices = utilities.calculateFfcsaPrices(row);
 
       // ✅ Prepare row data in the correct order
       const rowData = orderedColumnNames.map(column => {
         if (column === 'ffcsaPurchasePrice') return prices.purchasePrice;
-        if (column === 'ffcsaMemberMarkup') return pricingUtils.MEMBER_MARKUP;
+        if (column === 'ffcsaMemberMarkup') return utilities.MEMBER_MARKUP;
         if (column === 'ffcsaMemberSalesPrice') return prices.memberSalesPrice;
-        if (column === 'ffcsaGuestMarkup') return pricingUtils.GUEST_MARKUP;
+        if (column === 'ffcsaGuestMarkup') return utilities.GUEST_MARKUP;
         if (column === 'ffcsaGuestSalesPrice') return prices.guestSalesPrice;
         if (column === 'retailSalesPrice') return Number(row[column]); // ✅ Ensure it's a number
         if (column === 'lowest_weight') return Number(row[column]); // ✅ Ensure it's a number
@@ -103,11 +93,16 @@ async function exportPricelistToExcel() {
     const outputFile = 'docs/masterPriceList.xlsx';
     await workbook.xlsx.writeFile(outputFile);
     console.log(`✅ Excel file created: ${outputFile}`);
+    // ✅ Close DB connection immediately
+    await utilities.db.end();
+    console.log("✅ Database connection closed.");
+    
+    // ✅ Exit script
+    process.exit(0);
+
   } catch (error) {
     console.error('❌ Error exporting data:', error);
-  } finally {
-    await connection.end();
-  }
+  } 
 }
 
 exportPricelistToExcel();
