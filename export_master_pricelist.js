@@ -100,7 +100,7 @@ async function exportPricelistToExcel() {
     });
 
     // ✅ Save the file
-    const outputFile = '../docs/masterPriceList.xlsx';
+    const outputFile = 'docs/masterPriceList.xlsx';
     await workbook.xlsx.writeFile(outputFile);
     console.log(`✅ Excel file created: ${outputFile}`);
   } catch (error) {

@@ -1,45 +1,17 @@
+// *************************************
+// DEVELOPMENT VERSION
+// NOTE: we are coding this for now to
+// call the deck-test
+// *************************************
 require("dotenv").config();
-const pricingUtils = require('./utilities.pricing');
-
-const mysql = require('mysql2/promise');  // Or mysql2 if you're using that
+const utilities = require('./utilities.pricing');
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const { Parser } = require("json2csv");
 
-
-// PRICE_LISTS AND ASSOCIATED MARKUPS
-const PRICE_LISTS = {
-  test1: { id: 5332, markup: pricingUtils.MEMBER_MARKUP },
-  test2: { id: 5333, markup: pricingUtils.MEMBER_MARKUP },
-  guest: { id: 4757, markup: pricingUtils.GUEST_MARKUP }
-};
-
-// BASE_URL
-const BASE_URL = "https://deck-test.localline.ca";
 // ARRAY TO STORE MISSING LINKS
 const MISSING_LINKS_LOG = [];
-
-// Create a connection pool (promise-based)
-const db = mysql.createPool({
-    host: process.env.DFF_DB_HOST,
-    port: process.env.DFF_DB_PORT,
-    user: process.env.DFF_DB_USER,
-    password: process.env.DFF_DB_PASSWORD,
-    database: process.env.DFF_DB_DATABASE,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
-
-// Keep connection alive
-setInterval(async () => {
-    try {
-        await db.query('SELECT 1');
-    } catch (err) {
-        console.error("❌ Connection issue:", err);
-    }
-}, 30000);
 
 // Entry for updating a product on a single pricelist
 function generateSinglePriceListEntry(basePrice, priceListEntry, markupDecimal) {
@@ -64,20 +36,10 @@ function generateSinglePriceListEntry(basePrice, priceListEntry, markupDecimal) 
   };
 }
 
-// Get access token
-async function getAccessToken() {
-  const { data: auth } = await axios.post("https://localline.ca/api/backoffice/v2/token", {
-    username: process.env.TEST_USERNAME,
-    password: process.env.TEST_PASSWORD
-  });
-  return auth.access;
-}
-
 // Run the udpater script
 async function updateSinglePriceList(productId, newBasePrice, priceListID, markupDecimal, accessToken) {
   try {
-    const { data: product } = await axios.get(
-      `https://localline.ca/api/backoffice/v2/products/${productId}/`,
+    const { data: product } = await axios.get(utilities.LL_BASEURL + "products/"+ productId +"/",
       {
         headers: { Authorization: `Bearer ${accessToken}` }
       }
@@ -96,7 +58,7 @@ async function updateSinglePriceList(productId, newBasePrice, priceListID, marku
     );
 
     if (!entry) {
-      const priceListName = Object.keys(PRICE_LISTS).find(k => PRICE_LISTS[k] === priceListID) || `ID ${priceListID}`;
+      const priceListName = Object.keys(utilities.LL_TEST_PRICE_LISTS).find(k => utilities.LL_TEST_PRICE_LISTS[k] === priceListID) || `ID ${priceListID}`;
       console.warn(`⚠️ Product ${product.name} is not on price list "${priceListName}"`);
 
       const now = new Date();
@@ -138,15 +100,14 @@ async function updateSinglePriceList(productId, newBasePrice, priceListID, marku
       ]
     };
 
-    await axios.patch(
-      `https://localline.ca/api/backoffice/v2/products/${productId}/?expand=vendor`,
+    await axios.patch( utilities.LL_BASEURL + "products/"+ productId +"/?expand=vendor",
       payload,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
-          Referer: BASE_URL,
-          Origin: BASE_URL
+          Referer: utilities.LL_TEST_COMPANY_BASEURL, 
+          Origin: utilities.LL_TEST_COMPANY_BASEURL
         }
       }
     );
@@ -166,7 +127,7 @@ function writeMissingLinksLog() {
     return;
   }
 
-  const csvPath = path.join(__dirname, 'missing_price_list_links.csv');
+  const csvPath = path.join(__dirname, 'data/missing_price_list_links.csv');
 
   const fields = ["timestamp", "product_id", "product_name", "missing_price_list"];
   const parser = new Parser({ fields, header: !fs.existsSync(csvPath) });
@@ -178,8 +139,8 @@ function writeMissingLinksLog() {
 
 
 async function updateLLPrices(productID, price, accessToken) {
-  for (const listName in PRICE_LISTS) {
-    const { id, markup } = PRICE_LISTS[listName];
+  for (const listName in utilities.LL_TEST_PRICE_LISTS) {
+    const { id, markup } = utilities.LL_TEST_PRICE_LISTS[listName];
     await updateSinglePriceList(productID, price, id, markup, accessToken);
   }
 }
@@ -187,18 +148,17 @@ async function updateLLPrices(productID, price, accessToken) {
 // Query and update prices using async/await
 async function queryAndUpdatePrices(accessToken) {
     try {
-        const [rows] = await db.query(` SELECT * FROM pricelist WHERE localLineConnectedVendorProductID IS NOT NULL and category = 'Roasters & Turkeys' LIMIT 10`);
+        const [rows] = await utilities.db.query(` SELECT * FROM pricelist WHERE localLineConnectedVendorProductID IS NOT NULL and category = 'Roasters & Turkeys' LIMIT 5`);
 
         console.log(`🔎 Found ${rows.length} products to update.`);
 
         for (const row of rows) {
 
-            const prices = pricingUtils.calculateFfcsaPrices(row);
+            const prices = utilities.calculateFfcsaPrices(row);
 
             try {
                 await updateLLPrices(prices.productID, prices.purchasePrice, accessToken);
             } catch (e) {
-                //console.error(`❌ Failed to update product ${llProductID}:`, e);
                 console.error(`❌ Failed to update product ${prices.productID}:`);
             }
         }
@@ -212,10 +172,7 @@ async function queryAndUpdatePrices(accessToken) {
 (async () => {
     try {
         // Fetch access token at beginning of execution
-        const accessToken = await getAccessToken();
-
-        // Example manual update (optional)
-        //await updateLLPrices(935696, 5.00, accessToken);
+        const accessToken = await utilities.getAccessToken(process.env.TEST_LL_USERNAME, process.env.TEST_LL_PASSWORD);
 
         // Run query + loop updates
         await queryAndUpdatePrices(accessToken);
@@ -228,7 +185,7 @@ async function queryAndUpdatePrices(accessToken) {
         console.error("🚨 Error during execution:", err);
     } finally {
         // Gracefully end pool connections
-        await db.end();
+        await utilities.db.end();
         process.exit(0);
     }
 })();

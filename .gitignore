@@ -2,3 +2,4 @@
 node_modules/
 ca-cert.crt
 *.xlsx
+output.log

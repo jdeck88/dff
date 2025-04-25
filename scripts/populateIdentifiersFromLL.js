@@ -3,7 +3,7 @@ const XLSX = require('xlsx');
 const _ = require('lodash');
 require('dotenv').config();
 const mysql = require('mysql2/promise');
-const utilities = require('./utilities');
+const utilities = require('../utilities');
 
 async function run_analyzer(url) {
     try {
