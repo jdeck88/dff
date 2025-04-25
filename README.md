@@ -12,4 +12,3 @@ Local Line also contains the "Local Line Product ID" and "Package ID" to track a
 `update_prices.js`  -- Script to automatically update prices on the LL backend
 `utilities.pricing.js`  -- Utilities script sets important variables and makes database connection
 `template.env`  -- environment variables template
-
