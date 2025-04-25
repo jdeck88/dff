@@ -1,10 +1,47 @@
+require("dotenv").config();
+const pricingUtils = require('./utilities.pricing');
+
+const mysql = require('mysql2/promise');  // Or mysql2 if you're using that
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const { Parser } = require("json2csv");
-require("dotenv").config();
 
-// Create the entry for updating a product on a single pricelist
+
+// PRICE_LISTS AND ASSOCIATED MARKUPS
+const PRICE_LISTS = {
+  test1: { id: 5332, markup: pricingUtils.MEMBER_MARKUP },
+  test2: { id: 5333, markup: pricingUtils.MEMBER_MARKUP },
+  guest: { id: 4757, markup: pricingUtils.GUEST_MARKUP }
+};
+
+// BASE_URL
+const BASE_URL = "https://deck-test.localline.ca";
+// ARRAY TO STORE MISSING LINKS
+const MISSING_LINKS_LOG = [];
+
+// Create a connection pool (promise-based)
+const db = mysql.createPool({
+    host: process.env.DFF_DB_HOST,
+    port: process.env.DFF_DB_PORT,
+    user: process.env.DFF_DB_USER,
+    password: process.env.DFF_DB_PASSWORD,
+    database: process.env.DFF_DB_DATABASE,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// Keep connection alive
+setInterval(async () => {
+    try {
+        await db.query('SELECT 1');
+    } catch (err) {
+        console.error("❌ Connection issue:", err);
+    }
+}, 30000);
+
+// Entry for updating a product on a single pricelist
 function generateSinglePriceListEntry(basePrice, priceListEntry, markupDecimal) {
   if (!priceListEntry) return null;
 
@@ -92,9 +129,9 @@ async function updateSinglePriceList(productId, newBasePrice, priceListID, marku
         {
           id: packageId,
           name: firstPackage.name,
-          unit_price: newBasePrice.toFixed(2),
-          package_price: newBasePrice.toFixed(2),
-          package_unit_price: newBasePrice.toFixed(2),
+          unit_price: parseFloat(newBasePrice).toFixed(2),
+          package_price: parseFloat(newBasePrice).toFixed(2),
+          package_unit_price: parseFloat(newBasePrice).toFixed(2),
           inventory_per_unit: 1,
           price_list_entries: [priceListEntry]
         }
@@ -117,10 +154,12 @@ async function updateSinglePriceList(productId, newBasePrice, priceListID, marku
     console.log(`✅ Updated ${product.name} (${productId}) on price list ${priceListID} to $${newBasePrice} with ${(markupDecimal * 100).toFixed(2)}% markup`);
 
   } catch (err) {
-    console.error(`❌ Update failed for product ${productId}, price list ${priceListID}:`, err.response?.data || err.message);
+    //console.error(`❌ Update failed for product ${productId}, price list ${priceListID}:`, err.response?.data || err.message);
+    console.error(`❌ Update failed for product ${product.name} (${productId}) on price list ${priceListID}`);
   }
 }
 
+// Log missing links
 function writeMissingLinksLog() {
   if (!Array.isArray(MISSING_LINKS_LOG) || MISSING_LINKS_LOG.length === 0) {
     console.log("✅ No missing links to log.");
@@ -137,6 +176,7 @@ function writeMissingLinksLog() {
   console.log(`📄 Missing links written to: ${csvPath}`);
 }
 
+
 async function updateLLPrices(productID, price, accessToken) {
   for (const listName in PRICE_LISTS) {
     const { id, markup } = PRICE_LISTS[listName];
@@ -144,26 +184,51 @@ async function updateLLPrices(productID, price, accessToken) {
   }
 }
 
-// PRICE_LISTS AND ASSOCIATED MARKUPS
-const PRICE_LISTS = {
-  test1: { id: 5332, markup: 0.42 },
-  test2: { id: 5333, markup: 0.42 },
-  guest: { id: 4757, markup: 0.60 }
-};
+// Query and update prices using async/await
+async function queryAndUpdatePrices(accessToken) {
+    try {
+        const [rows] = await db.query(` SELECT * FROM pricelist WHERE localLineConnectedVendorProductID IS NOT NULL and category = 'Roasters & Turkeys' LIMIT 10`);
 
-// BASE_URL
-const BASE_URL = "https://deck-test.localline.ca";
-// ARRAY TO STORE MISSING LINKS
-const MISSING_LINKS_LOG = [];
+        console.log(`🔎 Found ${rows.length} products to update.`);
+
+        for (const row of rows) {
+
+            const prices = pricingUtils.calculateFfcsaPrices(row);
+
+            try {
+                await updateLLPrices(prices.productID, prices.purchasePrice, accessToken);
+            } catch (e) {
+                //console.error(`❌ Failed to update product ${llProductID}:`, e);
+                console.error(`❌ Failed to update product ${prices.productID}:`);
+            }
+        }
+    } catch (err) {
+        console.error("❌ Database query failed:", err);
+        throw err;
+    }
+}
 
 // MAIN EXECUTION
 (async () => {
-  // fetch access token at beginning of execution
-  const accessToken = await getAccessToken();
+    try {
+        // Fetch access token at beginning of execution
+        const accessToken = await getAccessToken();
 
-  // this part we want to loop
-  await updateLLPrices(935696, 5.00, accessToken);
+        // Example manual update (optional)
+        //await updateLLPrices(935696, 5.00, accessToken);
 
-  // clean up by writing out all missing links
-  writeMissingLinksLog();
+        // Run query + loop updates
+        await queryAndUpdatePrices(accessToken);
+
+        // Final cleanup
+        writeMissingLinksLog();
+
+        console.log("✅ All tasks completed.");
+    } catch (err) {
+        console.error("🚨 Error during execution:", err);
+    } finally {
+        // Gracefully end pool connections
+        await db.end();
+        process.exit(0);
+    }
 })();

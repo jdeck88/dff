@@ -23,10 +23,12 @@ function calculateFfcsaPrices(row) {
     }
 
     // Round to 2 decimal places and convert back to Number
+    // NOTE: for now we're returning the ConnectedVendorProductID for TESTING Only. We will switch this when we go into production
     return {
         purchasePrice: Number(ffcsaPurchasePrice.toFixed(2)),
         memberSalesPrice: Number((ffcsaPurchasePrice * (1 + MEMBER_MARKUP)).toFixed(2)),
-        guestSalesPrice: Number((ffcsaPurchasePrice * (1 + GUEST_MARKUP)).toFixed(2))
+        guestSalesPrice: Number((ffcsaPurchasePrice * (1 + GUEST_MARKUP)).toFixed(2)),
+        productID: Number(row.localLineConnectedVendorProductID)
     };
 }
 

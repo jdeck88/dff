@@ -59,22 +59,6 @@ async function exportPricelistToExcel() {
 
     // ✅ Insert data into the worksheet
     rows.forEach(row => {
-      /*
-      let ffcsaPurchasePrice = 0;
-
-      if (row.dff_unit_of_measure === 'lbs') {
-        const avgWeight = (Number(row.highest_weight) + Number(row.lowest_weight)) / 2;
-        ffcsaPurchasePrice = avgWeight * row.retailSalesPrice * 0.65;
-      } else if (row.dff_unit_of_measure === 'each') {
-        ffcsaPurchasePrice = row.retailSalesPrice * 0.65;
-      }
-
-      // ✅ Compute marked-up prices
-      const ffcsaMemberMarkup = 0.38;
-      const ffcsaGuestMarkup = 0.55;
-      const ffcsaMemberSalesPrice = ffcsaPurchasePrice * (1 + ffcsaMemberMarkup);
-      const ffcsaGuestSalesPrice = ffcsaPurchasePrice * (1 + ffcsaGuestMarkup);
-      */
       const prices = pricingUtils.calculateFfcsaPrices(row);
 
       // ✅ Prepare row data in the correct order
