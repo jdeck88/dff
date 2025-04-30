@@ -201,7 +201,7 @@ async function loadData() {
         <td>${row.category}</td>        
         <td>${row.productName}</td>
         <td>${row.packageName}</td>
-       <td><div>${row.description || ''}</div></td>
+<td>${(row.description || '').substring(0, 20)}</td>
 
                   <!--<td><textarea class="editable-textarea" oninput="markEdited(this); autoResize(this)">${row.description || ''}</textarea></td>     --> 
         <td><div class="toggle-switch ${row.visible ? 'active' : ''}" onclick="toggleSwitch(this)"></div></td>
