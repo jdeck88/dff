@@ -40,7 +40,8 @@ app.use(limiter); // Apply rate limiting globally
 const allowedOrigins = [
   "http://127.0.0.1:5500",
   "http://localhost:3000",
-  "https://jdeck88.github.io"
+  "https://jdeck88.github.io",
+  "https://reports.deckfamilyfarm.com"
 ];
 
 // ✅ Strict Request Filtering - Only allow known API paths
@@ -63,9 +64,10 @@ app.use((req, res, next) => {
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) {
-      console.warn(`🚨 No origin: ${origin}`);
-      return callback(new Error("Bad Request: No origin"), false);
+      console.warn(`⚠️ No Origin header. Allowing request.`);
+      return callback(null, true); // ✅ Allow server-side or CLI requests
     }
+
     if (!allowedOrigins.includes(origin)) {
       console.warn(`🚨 Not in approved list of origins: ${origin}`);
       return callback(new Error("Not an approved origin"), false);
@@ -128,45 +130,27 @@ app.post("/dff/v1/register", async (req, res) => {
 });
 
 // ✅ User Login with JWT
-app.post("/dff/v1/login", (req, res) => {
+app.post("/dff/v1/login", async (req, res) => {
   const { username, password } = req.body;
-  /*
-  utilities.db.query("SELECT * FROM users WHERE username = ?", [username], async (err, results) => {
-        if (err || results.length === 0) return res.status(400).json({ error: "User not found" });
 
-        const validPassword = await bcrypt.compare(password, results[0].password);
-        if (!validPassword) return res.status(401).json({ error: "Invalid password" });
-
-        const token = jwt.sign({ userId: results[0].id }, process.env.JWT_SECRET, { expiresIn: "90d" });
-
-        res.json({ message: "Login successful", token });
-    });
-    */
-  utilities.db.query("SELECT * FROM users WHERE username = ?", [username], async (err, results) => {
-    if (err) {
-      console.error("Database error:", err); // Log the full error internally
-      return res.status(500).json({ error: "Database error", details: err.message }); // Send a safe error message to the client
-    }
+  try {
+    const [results] = await utilities.db.query("SELECT * FROM users WHERE username = ?", [username]);
 
     if (results.length === 0) {
       return res.status(404).json({ error: "User does not exist" });
     }
 
-    try {
-      const validPassword = await bcrypt.compare(password, results[0].password);
-      if (!validPassword) {
-        return res.status(401).json({ error: "Invalid password" });
-      }
-
-      const token = jwt.sign({ userId: results[0].id }, process.env.JWT_SECRET, { expiresIn: "90d" });
-
-      res.json({ message: "Login successful", token });
-    } catch (bcryptError) {
-      console.error("Password comparison error:", bcryptError);
-      return res.status(500).json({ error: "Internal server error" });
+    const validPassword = await bcrypt.compare(password, results[0].password);
+    if (!validPassword) {
+      return res.status(401).json({ error: "Invalid password" });
     }
-  });
 
+    const token = jwt.sign({ userId: results[0].id }, process.env.JWT_SECRET, { expiresIn: "90d" });
+    res.json({ message: "Login successful", token });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
 // ✅ Middleware: Authenticate JWT Token

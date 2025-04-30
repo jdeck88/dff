@@ -40,19 +40,14 @@ function generateSinglePriceListEntry(basePrice, priceListEntry, markupDecimal) 
 async function updateSinglePriceList(productId, newBasePrice, priceListID, markupDecimal, accessToken) {
   try {
     const { data: product } = await axios.get(utilities.LL_BASEURL + "products/"+ productId +"/",
-      {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      }
+      { headers: { Authorization: `Bearer ${accessToken}` } }
     );
-
     const firstPackage = product.packages?.[0];
     if (!firstPackage) {
       console.error("❌ No package found for product", productId);
       return;
     }
-
     const packageId = firstPackage.id;
-
     const entry = (product.product_price_list_entries || []).find(
       e => e.price_list === priceListID
     );
@@ -70,9 +65,7 @@ async function updateSinglePriceList(productId, newBasePrice, priceListID, marku
         minute: '2-digit',
         hour12: true
       }).replace(",", "");
-
       const message = `product does not appear in pricelist ${priceListName} (${priceListID})`;
-
       MISSING_LINKS_LOG.push({
         timestamp: timestamp,
         product_id: product.id,
