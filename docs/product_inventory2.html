@@ -181,7 +181,7 @@ async function loadData() {
     }
 
     try {
-        const response = await fetch("https://biscicol.org/killdeer/v2/data", {
+        const response = await fetch("https://biscicol.org/killdeer/v2/get-product-data", {
             method: "GET",
             headers: { "Authorization": `Bearer ${token}` }
         });
@@ -346,7 +346,7 @@ async function applyChanges() {
     try {
     // Execute all update requests
     const responses = await Promise.all(updates.map(async ({ id, data }) => {
-        const response = await fetch(`https://biscicol.org/killdeer/v2/update/${id}`, {
+        const response = await fetch(`https://biscicol.org/killdeer/v2/update-inventory/${id}`, {
             method: "PUT",
             headers: {
                 "Authorization": `Bearer ${token}`,
