@@ -48,6 +48,7 @@ echo $1
 if [ "$1" == "exportPricelistForViewing.js" ]; then
   if [[ -n $(git status -s ../docs/masterPriceList.xlsx) ]]; then
     git add ../docs/masterPriceList.xlsx
+    git add ../docs/delivery_data.html
     git commit -m "Updating masterPriceList"
     git push
     echo "Changes pushed to GitHub."
